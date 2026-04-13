@@ -3,6 +3,8 @@ import { Home, Search, Library, ListMusic, Settings, Music, Play, Pause, SkipBac
 import { useAuth } from '../lib/auth';
 import { usePlayer, formatTime } from '../lib/player';
 import { LogoMark, Wordmark } from '../components/Logo';
+import PlaybackModeToggle from '../components/PlaybackModeToggle';
+import SkippedTracksBanner from '../components/SkippedTracksBanner';
 
 const navItems = [
   { to: '/app', icon: Home, label: 'Home', end: true },
@@ -83,6 +85,9 @@ export default function AppLayout() {
 
       {/* Main area */}
       <div className="flex-1 flex flex-col min-w-0">
+        {/* Skipped-tracks banner (auto-hides when empty) */}
+        <SkippedTracksBanner />
+
         <main className="flex-1 overflow-y-auto p-8">
           <Outlet />
         </main>
@@ -142,23 +147,26 @@ export default function AppLayout() {
             </div>
           </div>
 
-          {/* Volume */}
-          <div className="flex items-center gap-2 w-36 shrink-0">
-            <button
-              onClick={() => setVolume(volume > 0 ? 0 : 0.75)}
-              className="text-ash hover:text-pearl transition"
-            >
-              {volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-            </button>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.01"
-              value={volume}
-              onChange={(e) => setVolume(Number(e.target.value))}
-              className="flex-1"
-            />
+          {/* Mode + Volume */}
+          <div className="flex items-center gap-3 shrink-0">
+            <PlaybackModeToggle />
+            <div className="flex items-center gap-2 w-36">
+              <button
+                onClick={() => setVolume(volume > 0 ? 0 : 0.75)}
+                className="text-ash hover:text-pearl transition"
+              >
+                {volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              </button>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={volume}
+                onChange={(e) => setVolume(Number(e.target.value))}
+                className="flex-1"
+              />
+            </div>
           </div>
         </div>
       </div>
