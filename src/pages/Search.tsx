@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Search as SearchIcon, Play, Pause, Plus, Loader2,
-  ExternalLink, Music, Youtube,
+  ExternalLink, Music, Youtube, Lock, Crown,
 } from 'lucide-react';
 import { usePlayer } from '../lib/player';
 import type { PlayerTrack } from '../lib/player';
-import { searchAll, extractAudio, saveTrackToLibrary } from '../lib/api';
+import { searchAll, extractAudio, saveTrackToLibrary, PHASE_1_SOURCES } from '../lib/api';
 import type { UnifiedResult, SourcePlatform, MultiSourceStatus } from '../lib/api';
+import {
+  beginSpotifyOAuth, getMySpotifyConnection, type SpotifyConnection,
+} from '../lib/spotify';
 
 // ── Platform metadata ───────────────────────────────────────────────────
 const PLATFORM_META: Record<SourcePlatform, { label: string; badge: string; accent: string }> = {
@@ -17,7 +20,13 @@ const PLATFORM_META: Record<SourcePlatform, { label: string; badge: string; acce
 };
 
 // ── Unified Result Card ─────────────────────────────────────────────────
-function ResultCard({ result }: { result: UnifiedResult }) {
+function ResultCard({
+  result,
+  spotifyConnection,
+}: {
+  result: UnifiedResult;
+  spotifyConnection: SpotifyConnection | null;
+}) {
   const { play, currentTrack, isPlaying, togglePlayPause } = usePlayer();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -29,30 +38,51 @@ function ResultCard({ result }: { result: UnifiedResult }) {
 
   const meta = PLATFORM_META[result.source_platform];
 
+  // Spotify-specific gating ------------------------------------------------
+  const isSpotify = result.source_platform === 'spotify';
+  const spotifyGated = isSpotify && (!spotifyConnection || !spotifyConnection.is_premium);
+  const needsConnect = isSpotify && !spotifyConnection;
+  const needsPremium = isSpotify && spotifyConnection && !spotifyConnection.is_premium;
+
   const handlePlay = async () => {
     if (isThisPlaying) {
       togglePlayPause();
       return;
     }
+
+    // Spotify gating: don't attempt playback if user can't play it
+    if (spotifyGated) return;
+
     setError(null);
     setLoading(true);
     try {
-      let audioUrl: string | null = null;
+      if (result.source_platform === 'spotify') {
+        // Full-track playback via Web Playback SDK. Audio URL is the Spotify URI.
+        const track: PlayerTrack = {
+          title: result.title,
+          artist: result.artist,
+          thumbnail_url: result.thumbnail_url,
+          audio_url: `spotify:track:${result.source_id}`,
+          duration_seconds: result.duration_seconds,
+          source_platform: 'spotify',
+          source_id: result.source_id,
+          source_url: result.external_url,
+        };
+        play(track);
+        setLoading(false);
+        return;
+      }
 
+      let audioUrl: string | null = null;
       if (result.source_platform === 'youtube') {
-        // YouTube needs extraction for full audio
         const audio = await extractAudio(result.source_id);
         audioUrl = audio.audio_url;
-      } else if (result.preview_url) {
-        // Spotify / Apple Music: 30s preview
-        audioUrl = result.preview_url;
       } else if (result.stream_url) {
-        // SoundCloud: progressive stream (needs client_id resolution server-side)
         audioUrl = result.stream_url;
       }
 
       if (!audioUrl) {
-        setError('No preview available for this track');
+        setError('No playback available for this track');
         setLoading(false);
         return;
       }
@@ -94,25 +124,30 @@ function ResultCard({ result }: { result: UnifiedResult }) {
     setSaving(false);
   };
 
-  const isPreviewOnly = (result.source_platform === 'spotify' || result.source_platform === 'applemusic')
-    && result.preview_url;
-
   return (
-    <div className="bg-void border border-slate rounded-xl overflow-hidden transition hover:border-graphite">
+    <div className={`bg-void border rounded-xl overflow-hidden transition ${
+      spotifyGated ? 'border-slate/40 opacity-80' : 'border-slate hover:border-graphite'
+    }`}>
       <div className="flex items-center gap-4 p-4 group">
         {/* Thumbnail with play overlay */}
         <button
           onClick={handlePlay}
-          disabled={loading}
-          className="w-24 h-24 rounded-lg bg-gradient-to-br from-pink/30 to-pink-700/10 flex items-center justify-center shrink-0 relative overflow-hidden group/thumb"
+          disabled={loading || spotifyGated}
+          className={`w-24 h-24 rounded-lg bg-gradient-to-br from-pink/30 to-pink-700/10 flex items-center justify-center shrink-0 relative overflow-hidden group/thumb ${
+            spotifyGated ? 'cursor-not-allowed' : ''
+          }`}
         >
           {result.thumbnail_url ? (
             <img src={result.thumbnail_url} alt="" className="w-full h-full object-cover rounded-lg" />
           ) : (
             <Music className="w-6 h-6 text-ash" />
           )}
-          <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition">
-            {loading ? (
+          <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition ${
+            spotifyGated ? 'opacity-100' : 'opacity-0 group-hover/thumb:opacity-100'
+          }`}>
+            {spotifyGated ? (
+              <Lock className="w-5 h-5 text-white" />
+            ) : loading ? (
               <Loader2 className="w-6 h-6 text-white animate-spin" />
             ) : isThisPlaying && isPlaying ? (
               <Pause className="w-6 h-6 text-white" />
@@ -132,12 +167,19 @@ function ResultCard({ result }: { result: UnifiedResult }) {
 
         {/* Track info */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${meta.accent}`}>
               {meta.label}
             </span>
-            {isPreviewOnly && (
-              <span className="text-[10px] text-ash font-mono">30s preview</span>
+            {needsConnect && (
+              <span className="text-[10px] font-semibold text-pink border border-pink/40 px-1.5 py-0.5 rounded flex items-center gap-1">
+                <Lock className="w-2.5 h-2.5" /> Connect Spotify to play
+              </span>
+            )}
+            {needsPremium && (
+              <span className="text-[10px] font-semibold text-warning border border-warning/40 px-1.5 py-0.5 rounded flex items-center gap-1">
+                <Crown className="w-2.5 h-2.5" /> Spotify Premium required
+              </span>
             )}
             {result.explicit && (
               <span className="text-[10px] font-bold text-ash border border-ash/40 px-1.5 py-0.5 rounded">E</span>
@@ -187,7 +229,7 @@ function ResultCard({ result }: { result: UnifiedResult }) {
 }
 
 // ── Source filter pills ─────────────────────────────────────────────────
-const ALL_SOURCES: SourcePlatform[] = ['youtube', 'spotify', 'applemusic', 'soundcloud'];
+const VISIBLE_SOURCES: SourcePlatform[] = PHASE_1_SOURCES;
 
 // ── Main Search Page ────────────────────────────────────────────────────
 export default function Search() {
@@ -199,6 +241,15 @@ export default function Search() {
   const [activeFilter, setActiveFilter] = useState<'all' | SourcePlatform>('all');
   const [status, setStatus] = useState<MultiSourceStatus | null>(null);
   const [sourceErrors, setSourceErrors] = useState<Record<string, string>>({});
+  const [spotifyConnection, setSpotifyConnection] = useState<SpotifyConnection | null>(null);
+  const [connecting, setConnecting] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const conn = await getMySpotifyConnection();
+      setSpotifyConnection(conn);
+    })();
+  }, []);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -208,7 +259,7 @@ export default function Search() {
     setError(null);
 
     try {
-      const data = await searchAll(query.trim(), ALL_SOURCES, 10);
+      const data = await searchAll(query.trim(), VISIBLE_SOURCES, 10);
       setResults(data.results);
       setStatus(data.status);
       setSourceErrors(data.errors);
@@ -220,6 +271,12 @@ export default function Search() {
     setSearching(false);
   };
 
+  const handleConnectSpotify = async () => {
+    setConnecting(true);
+    try { await beginSpotifyOAuth('/app/search'); }
+    catch (e) { setConnecting(false); setError((e as Error).message); }
+  };
+
   const filteredResults = activeFilter === 'all'
     ? results
     : results.filter((r) => r.source_platform === activeFilter);
@@ -227,14 +284,45 @@ export default function Search() {
   const countBySource = (src: SourcePlatform) =>
     results.filter((r) => r.source_platform === src).length;
 
+  const spotifyConnected = !!spotifyConnection;
+  const spotifyPremium = !!spotifyConnection?.is_premium;
+
   return (
     <div className="max-w-5xl">
       <h1 className="font-display font-black text-3xl text-pearl mb-2" style={{ letterSpacing: '-0.03em' }}>
         Mix everything.
       </h1>
       <p className="text-sm text-silver mb-6">
-        Search across YouTube, Spotify, Apple Music, and SoundCloud — all in one feed.
+        Search across YouTube, Spotify, and SoundCloud — all in one feed.
       </p>
+
+      {/* Spotify connection banner */}
+      {!spotifyConnected && (
+        <div className="bg-gradient-to-r from-green-900/20 to-pink/10 border border-green-500/30 rounded-xl p-4 mb-6 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
+            <Music className="w-5 h-5 text-green-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-pearl">Connect Spotify for full-track playback</p>
+            <p className="text-xs text-silver">Requires Spotify Premium. YouTube + SoundCloud play for everyone.</p>
+          </div>
+          <button
+            onClick={handleConnectSpotify}
+            disabled={connecting}
+            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-semibold transition shrink-0"
+          >
+            {connecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Connect Spotify'}
+          </button>
+        </div>
+      )}
+      {spotifyConnected && !spotifyPremium && (
+        <div className="bg-warning/10 border border-warning/30 rounded-xl p-4 mb-6 flex items-center gap-3">
+          <Crown className="w-5 h-5 text-warning shrink-0" />
+          <p className="text-xs text-silver flex-1">
+            Spotify connected — but your account is Free. Upgrade to Spotify Premium to play full tracks in Mixd.
+          </p>
+        </div>
+      )}
 
       <form onSubmit={handleSearch} className="mb-6">
         <div className="flex gap-3">
@@ -270,7 +358,7 @@ export default function Search() {
           >
             All ({results.length})
           </button>
-          {ALL_SOURCES.map((src) => {
+          {VISIBLE_SOURCES.map((src) => {
             const count = countBySource(src);
             const srcStatus = status?.[src];
             return (
@@ -305,7 +393,7 @@ export default function Search() {
       {searching ? (
         <div className="text-center py-20">
           <Loader2 className="w-8 h-8 text-pink animate-spin mx-auto mb-4" />
-          <p className="text-silver">Mixing results from all sources...</p>
+          <p className="text-silver">Mixing results from every source...</p>
         </div>
       ) : error ? (
         <div className="text-center py-20">
@@ -315,7 +403,11 @@ export default function Search() {
       ) : filteredResults.length > 0 ? (
         <div className="space-y-3">
           {filteredResults.map((r) => (
-            <ResultCard key={`${r.source_platform}-${r.source_id}`} result={r} />
+            <ResultCard
+              key={`${r.source_platform}-${r.source_id}`}
+              result={r}
+              spotifyConnection={spotifyConnection}
+            />
           ))}
         </div>
       ) : (
@@ -343,9 +435,6 @@ export default function Search() {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Music className="w-3.5 h-3.5" /> Spotify
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Music className="w-3.5 h-3.5" /> Apple Music
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Music className="w-3.5 h-3.5" /> SoundCloud

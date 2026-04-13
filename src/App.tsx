@@ -8,6 +8,7 @@ import Library from './pages/Library';
 import Search from './pages/Search';
 import Playlists from './pages/Playlists';
 import Settings from './pages/Settings';
+import SpotifyCallback from './pages/SpotifyCallback';
 import ProtectedRoute from './components/ProtectedRoute';
 
 export default function App() {
@@ -18,6 +19,16 @@ export default function App() {
       <Route path="/signin" element={<SignIn />} />
       <Route path="/signup" element={<SignUp />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
+
+      {/* Spotify OAuth callback (protected so the user is signed in when we exchange the code) */}
+      <Route
+        path="/auth/spotify/callback"
+        element={
+          <ProtectedRoute>
+            <SpotifyCallback />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Protected app routes */}
       <Route
