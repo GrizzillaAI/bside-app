@@ -1,4 +1,4 @@
-// B-Side Global Audio Player Context
+// Mixd Global Audio Player Context
 // Manages audio playback state across the entire app — one audio element, shared everywhere
 
 import { createContext, useContext, useRef, useState, useCallback, useEffect, ReactNode } from 'react';

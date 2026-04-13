@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
-import { Music, Loader2, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { Loader2, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { LogoMark, Wordmark } from '../components/Logo';
 
 export default function SignIn() {
   const { signIn } = useAuth();
@@ -27,49 +28,44 @@ export default function SignIn() {
   };
 
   return (
-    <div className="min-h-screen bg-[#08080C] flex items-center justify-center px-4">
-      {/* Background glow */}
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[400px] h-[400px] bg-[#FF4F2B]/10 rounded-full blur-[100px]" />
+    <div className="min-h-screen bg-ink flex items-center justify-center px-4">
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[400px] h-[400px] bg-pink/15 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="relative w-full max-w-md">
-        {/* Back link */}
-        <Link to="/" className="inline-flex items-center gap-2 text-[#9898AA] hover:text-white text-sm mb-8 transition">
+        <Link to="/" className="inline-flex items-center gap-2 text-silver hover:text-white text-sm mb-8 transition">
           <ArrowLeft className="w-4 h-4" /> Back to home
         </Link>
 
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-2">
-          <Music className="w-8 h-8 text-[#FF4F2B]" />
-          <span className="text-2xl font-bold">B-Side</span>
+        <div className="flex items-center gap-2 mb-8">
+          <LogoMark size={32} />
+          <Wordmark size={26} />
         </div>
-        <h1 className="text-3xl font-bold mb-2">Welcome back</h1>
-        <p className="text-[#9898AA] mb-8">Sign in to your account to continue</p>
+        <h1 className="font-display font-black text-4xl text-pearl mb-2" style={{ letterSpacing: '-0.03em' }}>Welcome back.</h1>
+        <p className="text-silver mb-8">Sign in and pick up where you left off.</p>
 
-        {/* Error */}
         {error && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 mb-6 text-sm text-red-400">
+          <div className="bg-error/10 border border-error/30 rounded-lg px-4 py-3 mb-6 text-sm text-error">
             {error}
           </div>
         )}
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-2">Email</label>
+            <label className="block text-sm font-medium mb-2 text-cloud">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
               required
-              className="w-full bg-[#0E0E14] border border-[#1E1E2A] focus:border-[#FF4F2B] rounded-lg px-4 py-3 text-sm outline-none transition placeholder:text-[#5A5A72]"
+              className="w-full bg-void border border-slate focus:border-pink rounded-lg px-4 py-3 text-sm outline-none transition placeholder:text-ash"
             />
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium">Password</label>
-              <Link to="/forgot-password" className="text-xs text-[#FF4F2B] hover:text-[#FF6B4A] transition">
+              <label className="text-sm font-medium text-cloud">Password</label>
+              <Link to="/forgot-password" className="text-xs text-pink hover:text-pink-400 transition">
                 Forgot password?
               </Link>
             </div>
@@ -80,12 +76,12 @@ export default function SignIn() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter your password"
                 required
-                className="w-full bg-[#0E0E14] border border-[#1E1E2A] focus:border-[#FF4F2B] rounded-lg px-4 py-3 pr-12 text-sm outline-none transition placeholder:text-[#5A5A72]"
+                className="w-full bg-void border border-slate focus:border-pink rounded-lg px-4 py-3 pr-12 text-sm outline-none transition placeholder:text-ash"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5A5A72] hover:text-white transition"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-ash hover:text-white transition"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -95,18 +91,17 @@ export default function SignIn() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[#FF4F2B] hover:bg-[#E63D1A] disabled:opacity-50 py-3 rounded-lg text-sm font-semibold transition flex items-center justify-center gap-2"
+            className="w-full bg-pink hover:bg-pink-600 disabled:opacity-50 py-3 rounded-lg text-sm font-semibold text-white transition flex items-center justify-center gap-2"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
 
-        {/* Sign up link */}
-        <p className="text-center text-sm text-[#9898AA] mt-6">
-          Don't have an account?{' '}
-          <Link to="/signup" className="text-[#FF4F2B] hover:text-[#FF6B4A] font-medium transition">
-            Sign up free
+        <p className="text-center text-sm text-silver mt-6">
+          New here?{' '}
+          <Link to="/signup" className="text-pink hover:text-pink-400 font-medium transition">
+            Start mixing free
           </Link>
         </p>
       </div>

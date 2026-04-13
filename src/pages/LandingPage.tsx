@@ -1,174 +1,255 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Music,
-  Search,
-  Library,
-  Headphones,
-  Users,
-  Wifi,
-  Star,
-  Zap,
-  Check,
-  ArrowRight,
+  Layers, Library, Music, Radio, Star, Zap, Check, ArrowRight, Youtube,
 } from 'lucide-react';
+import { LogoMark, Wordmark } from '../components/Logo';
+
+// Mixd landing page — brand kit: "Mix everything." Signal Pink #FF2D87 on Ink #050509.
+// Voice: active verbs, short punchy sentences. "Mix is a verb."
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#08080C] text-[#EEEEF2] overflow-hidden">
-      {/* Hero Section */}
-      <section className="relative h-screen flex items-center justify-center px-4 pt-20">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-to-r from-[#FF4F2B] to-[#6930FF] rounded-full mix-blend-screen filter blur-3xl opacity-15 animate-pulse"></div>
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-r from-[#6930FF] to-[#FF4F2B] rounded-full mix-blend-screen filter blur-3xl opacity-15 animate-pulse" style={{ animationDelay: '2s' }}></div>
-        </div>
-
-        <div className="relative z-10 text-center max-w-4xl">
-          <div className="mb-6 flex justify-center">
-            <div className="inline-flex items-center gap-2 px-5 py-2 bg-[#FF4F2B]/8 rounded-full border border-[#FF4F2B]/20">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#FF4F2B] animate-pulse" />
-              <span className="text-xs font-semibold tracking-widest uppercase text-[#FF8C72]">Audio Without Borders</span>
-            </div>
-          </div>
-
-          <h1 className="font-display text-7xl md:text-8xl font-bold mb-6 text-[#FAFAFC] leading-none" style={{ letterSpacing: '-4px' }}>
-            B<span className="text-[#FF4F2B]">-</span>Side
-          </h1>
-
-          <p className="text-xl text-[#9898AA] mb-10 max-w-xl mx-auto leading-relaxed">
-            The world's best music lives on video platforms. We set it free. One tap to extract. One library to rule them all.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+    <div className="min-h-screen bg-ink text-pearl overflow-hidden">
+      {/* Top nav */}
+      <nav className="sticky top-0 z-20 bg-ink/85 backdrop-blur-md border-b border-slate/70">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2">
+            <LogoMark size={28} />
+            <Wordmark size={22} />
+          </Link>
+          <div className="flex items-center gap-3">
+            <Link to="/signin" className="text-sm text-silver hover:text-white transition px-3 py-2">
+              Sign in
+            </Link>
             <Link
               to="/signup"
-              className="px-8 py-4 bg-[#FF4F2B] hover:bg-[#E63D1A] rounded-lg font-semibold text-white transition-all duration-200 flex items-center justify-center gap-2 group"
+              className="text-sm font-semibold bg-pink hover:bg-pink-600 text-white px-4 py-2 rounded-lg transition"
             >
-              Get Started Free
+              Start mixing
+            </Link>
+          </div>
+        </div>
+      </nav>
+
+      {/* Hero */}
+      <section className="relative px-4 pt-24 pb-32 overflow-hidden">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-[32rem] h-[32rem] bg-pink rounded-full mix-blend-screen filter blur-[120px] opacity-20 animate-pulse" />
+          <div className="absolute bottom-1/4 right-1/4 w-[28rem] h-[28rem] bg-cobalt rounded-full mix-blend-screen filter blur-[120px] opacity-15 animate-pulse" style={{ animationDelay: '2s' }} />
+          <div className="absolute top-1/2 right-1/3 w-64 h-64 bg-lime rounded-full mix-blend-screen filter blur-[100px] opacity-10" />
+        </div>
+
+        <div className="relative z-10 max-w-5xl mx-auto text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-pink/10 rounded-full border border-pink/30 mb-8">
+            <span className="w-1.5 h-1.5 rounded-full bg-pink animate-pulse" />
+            <span className="font-mono text-[11px] font-semibold tracking-[0.2em] uppercase text-pink-200">
+              Audio without borders
+            </span>
+          </div>
+
+          <h1
+            className="font-display font-black text-7xl md:text-[9rem] leading-[0.9] text-pearl mb-8"
+            style={{ letterSpacing: '-0.04em' }}
+          >
+            Mix<br />
+            <span className="text-pink">everything.</span>
+          </h1>
+
+          <p className="text-xl md:text-2xl text-silver mb-12 max-w-2xl mx-auto leading-relaxed">
+            The world's best audio lives across a dozen platforms. Mixd pulls it into one.
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mb-12">
+            <Link
+              to="/signup"
+              className="group px-8 py-4 bg-pink hover:bg-pink-600 rounded-lg font-semibold text-white transition flex items-center justify-center gap-2"
+            >
+              Start mixing — free
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
             <Link
               to="/signin"
-              className="px-8 py-4 bg-[#0E0E14] hover:bg-[#16161F] border border-[#2A2A3A] rounded-lg font-semibold text-[#FAFAFC] transition-all duration-200"
+              className="px-8 py-4 bg-void hover:bg-graphite border border-slate rounded-lg font-semibold text-pearl transition"
             >
-              Sign In
+              Sign in
             </Link>
           </div>
 
-          <p className="text-xs tracking-widest uppercase text-[#2A2A3A]">A Grizzilla AI / Bucky Ventures Product</p>
+          {/* Source badges */}
+          <div className="flex flex-wrap gap-3 justify-center items-center mb-4">
+            <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-ash">Pulls from:</span>
+            {['YouTube', 'Spotify', 'Apple Music', 'SoundCloud', 'TikTok', 'Podcasts'].map((src) => (
+              <span key={src} className="font-mono text-[11px] tracking-wider uppercase text-silver px-3 py-1 border border-slate rounded-full">
+                {src}
+              </span>
+            ))}
+          </div>
+
+          <p className="font-mono text-[10px] tracking-[0.25em] uppercase text-smoke mt-12">
+            A Grizzilla AI / Bucky Ventures Product
+          </p>
         </div>
       </section>
 
-      {/* How It Works Section */}
-      <section className="py-24 px-4 bg-[#08080C]">
+      {/* Three pillars */}
+      <section className="py-24 px-4 bg-ink border-t border-slate/60">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <p className="font-mono text-xs font-semibold tracking-[3px] uppercase text-[#FF4F2B] mb-4">How It Works</p>
-            <h2 className="font-display text-4xl md:text-5xl font-bold text-[#FAFAFC]" style={{ letterSpacing: '-2px' }}>Search. Extract. Listen.</h2>
+          <div className="mb-16">
+            <p className="font-mono text-xs font-semibold tracking-[0.25em] uppercase text-pink mb-4">01 — The Pillars</p>
+            <h2 className="font-display font-black text-5xl md:text-7xl text-pearl" style={{ letterSpacing: '-0.03em' }}>
+              Three ideas.<br />One app.
+            </h2>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-[2px] bg-[#FAFAFC]/[0.03] rounded-2xl overflow-hidden">
-            <div className="bg-[#0E0E14] p-12">
-              <p className="font-display text-5xl font-bold text-[#FF4F2B] opacity-30 mb-4">01</p>
-              <h3 className="font-display text-xl font-semibold text-[#FAFAFC] mb-3" style={{ letterSpacing: '-0.5px' }}>Search</h3>
-              <p className="text-sm text-[#9898AA] leading-relaxed">Find audio content from YouTube, TikTok, Instagram, and anywhere on the web.</p>
-            </div>
-            <div className="bg-[#0E0E14] p-12">
-              <p className="font-display text-5xl font-bold text-[#FF4F2B] opacity-30 mb-4">02</p>
-              <h3 className="font-display text-xl font-semibold text-[#FAFAFC] mb-3" style={{ letterSpacing: '-0.5px' }}>Extract</h3>
-              <p className="text-sm text-[#9898AA] leading-relaxed">One tap to rip the audio and save it to your personal library. No video, just sound.</p>
-            </div>
-            <div className="bg-[#0E0E14] p-12">
-              <p className="font-display text-5xl font-bold text-[#FF4F2B] opacity-30 mb-4">03</p>
-              <h3 className="font-display text-xl font-semibold text-[#FAFAFC] mb-3" style={{ letterSpacing: '-0.5px' }}>Listen</h3>
-              <p className="text-sm text-[#9898AA] leading-relaxed">Seamless audio-only playback. Build playlists. Discover what Spotify doesn't carry.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <div className="max-w-6xl mx-auto h-px bg-gradient-to-r from-transparent via-[#FAFAFC]/[0.08] to-transparent" />
-
-      {/* Features Grid Section */}
-      <section className="py-24 px-4 bg-[#08080C]">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <p className="font-mono text-xs font-semibold tracking-[3px] uppercase text-[#FF4F2B] mb-4">Features</p>
-            <h2 className="font-display text-4xl md:text-5xl font-bold text-[#FAFAFC]" style={{ letterSpacing: '-2px' }}>Built for Crate Diggers</h2>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-3 gap-6">
             {[
-              { icon: Zap, title: 'Audio Extraction', desc: 'Rip audio from any video link — YouTube, TikTok, Instagram. One tap.' },
-              { icon: Wifi, title: 'Multi-Source', desc: 'If it exists as audio anywhere on the internet, B-Side can find and extract it.' },
-              { icon: Library, title: 'Smart Library', desc: 'Your personal collection of extracted audio, organized and always available.' },
-              { icon: Star, title: 'Creator Attribution', desc: 'Every play fires a callback to the original creator. We amplify, not steal.' },
-              { icon: Search, title: 'Deep Discovery', desc: 'Find Tiny Desk sessions, live takes, acoustic covers — the music algorithms miss.' },
-              { icon: Headphones, title: 'Audio-Only Player', desc: 'No video. No distractions. Just clean, focused audio playback.' },
-            ].map(({ icon: Icon, title, desc }) => (
-              <div key={title} className="group bg-[#0E0E14] p-8 rounded-xl border border-[#FAFAFC]/[0.04] hover:border-[#FF4F2B]/30 transition-all duration-200">
-                <div className="w-10 h-10 bg-[#FF4F2B]/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-[#FF4F2B]/20 transition-colors">
-                  <Icon className="w-5 h-5 text-[#FF4F2B]" />
-                </div>
-                <h3 className="font-display text-lg font-semibold text-[#FAFAFC] mb-2" style={{ letterSpacing: '-0.5px' }}>{title}</h3>
-                <p className="text-sm text-[#9898AA] leading-relaxed">{desc}</p>
+              {
+                num: '01',
+                tag: 'Active, not passive',
+                title: 'You make the mix.',
+                desc: 'Other apps tell you what to listen to. Mixd hands you the tools. Paste a link from anywhere. Pull the audio. Drop it in the playlist that becomes the mix that becomes your sound.',
+              },
+              {
+                num: '02',
+                tag: 'Sourced from everywhere',
+                title: 'All platforms. One library.',
+                desc: "Mixd is the first audio app that doesn't care where the sound lives. YouTube, Spotify, Apple Music, SoundCloud, podcasts — we flatten the walls and give you one library.",
+              },
+              {
+                num: '03',
+                tag: 'Creators win louder',
+                title: 'Every play pays back.',
+                desc: "Every stream on Mixd fires attribution back to the original platform. Your play counts twice — once on your mix, once on their channel. We amplify. We don't siphon.",
+              },
+            ].map(({ num, tag, title, desc }) => (
+              <div key={num} className="bg-void border border-slate rounded-2xl p-8 hover:border-pink/50 transition">
+                <p className="font-mono text-[11px] tracking-[0.2em] uppercase text-ash mb-6">{num} — {tag}</p>
+                <h3 className="font-display font-black text-3xl text-pearl mb-4" style={{ letterSpacing: '-0.02em' }}>
+                  {title}
+                </h3>
+                <p className="text-silver leading-relaxed">{desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <div className="max-w-6xl mx-auto h-px bg-gradient-to-r from-transparent via-[#FAFAFC]/[0.08] to-transparent" />
+      {/* How it works */}
+      <section className="py-24 px-4 bg-ink border-t border-slate/60">
+        <div className="max-w-6xl mx-auto">
+          <div className="mb-16">
+            <p className="font-mono text-xs font-semibold tracking-[0.25em] uppercase text-pink mb-4">02 — How it works</p>
+            <h2 className="font-display font-black text-5xl md:text-7xl text-pearl" style={{ letterSpacing: '-0.03em' }}>
+              Search. Mix. Play.
+            </h2>
+          </div>
 
-      {/* Pricing Section */}
-      <section className="py-24 px-4 bg-[#08080C]">
+          <div className="grid md:grid-cols-3 gap-[2px] bg-white/[0.04] rounded-2xl overflow-hidden">
+            {[
+              { num: '01', title: 'Search', desc: 'Hit search. Mixd queries YouTube, Spotify, Apple Music, and SoundCloud at once.' },
+              { num: '02', title: 'Mix', desc: 'Pull audio from any source. Drop it into a playlist. Your crate, your rules.' },
+              { num: '03', title: 'Play', desc: 'Seamless playback across sources. No video. No distraction. Just sound.' },
+            ].map(({ num, title, desc }) => (
+              <div key={num} className="bg-void p-12">
+                <p className="font-display font-black text-6xl text-pink/30 mb-4">{num}</p>
+                <h3 className="font-display font-black text-2xl text-pearl mb-3" style={{ letterSpacing: '-0.02em' }}>
+                  {title}
+                </h3>
+                <p className="text-silver leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section className="py-24 px-4 bg-ink border-t border-slate/60">
+        <div className="max-w-6xl mx-auto">
+          <div className="mb-16">
+            <p className="font-mono text-xs font-semibold tracking-[0.25em] uppercase text-pink mb-4">03 — Built for crate diggers</p>
+            <h2 className="font-display font-black text-5xl md:text-7xl text-pearl" style={{ letterSpacing: '-0.03em' }}>
+              Every tool you need.
+            </h2>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[
+              { icon: Layers, title: 'Multi-source search', desc: 'YouTube, Spotify, Apple Music, SoundCloud — one search box.' },
+              { icon: Zap, title: 'Audio extraction', desc: 'Rip audio from any video link. One tap. No video, just sound.' },
+              { icon: Library, title: 'Smart library', desc: 'Your extracted audio, organized and always available.' },
+              { icon: Star, title: 'Creator attribution', desc: 'Every play fires back to the original source. We amplify, not steal.' },
+              { icon: Radio, title: 'Deep discovery', desc: 'Tiny Desk, KEXP, Boiler Room — the music algorithms miss.' },
+              { icon: Music, title: 'Audio-only player', desc: 'No video. No autoplay next. Clean, focused listening.' },
+            ].map(({ icon: Icon, title, desc }) => (
+              <div key={title} className="group bg-void p-8 rounded-xl border border-slate hover:border-pink/40 transition">
+                <div className="w-10 h-10 bg-pink/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-pink/20 transition-colors">
+                  <Icon className="w-5 h-5 text-pink" />
+                </div>
+                <h3 className="font-display font-bold text-lg text-pearl mb-2" style={{ letterSpacing: '-0.02em' }}>{title}</h3>
+                <p className="text-sm text-silver leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section className="py-24 px-4 bg-ink border-t border-slate/60">
         <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-16">
-            <p className="font-mono text-xs font-semibold tracking-[3px] uppercase text-[#FF4F2B] mb-4">Pricing</p>
-            <h2 className="font-display text-4xl md:text-5xl font-bold text-[#FAFAFC]" style={{ letterSpacing: '-2px' }}>Simple Pricing</h2>
+          <div className="mb-16">
+            <p className="font-mono text-xs font-semibold tracking-[0.25em] uppercase text-pink mb-4">04 — Pricing</p>
+            <h2 className="font-display font-black text-5xl md:text-7xl text-pearl" style={{ letterSpacing: '-0.03em' }}>
+              Two plans.<br />No maze.
+            </h2>
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
-            {/* Free Plan */}
-            <div className="bg-[#0E0E14] p-8 rounded-xl border border-[#FAFAFC]/[0.04] flex flex-col">
-              <h3 className="font-display text-2xl font-bold text-[#FAFAFC] mb-2">Free</h3>
-              <p className="text-sm text-[#9898AA] mb-6">Start digging through the crates</p>
+            {/* Free */}
+            <div className="bg-void p-8 rounded-2xl border border-slate flex flex-col">
+              <h3 className="font-display font-black text-3xl text-pearl mb-2">Free</h3>
+              <p className="text-sm text-silver mb-6">Start digging. No card.</p>
               <div className="mb-8">
-                <span className="font-display text-4xl font-bold text-[#FAFAFC]">$0</span>
-                <span className="font-mono text-sm text-[#5A5A72] ml-2">/month</span>
+                <span className="font-display font-black text-5xl text-pearl">$0</span>
+                <span className="font-mono text-sm text-ash ml-2">/mo</span>
               </div>
-              <Link to="/signup" className="block w-full px-6 py-3 bg-[#16161F] hover:bg-[#1E1E2A] border border-[#2A2A3A] rounded-lg font-semibold text-[#FAFAFC] transition-all duration-200 mb-8 text-center">
-                Get Started
+              <Link to="/signup" className="block w-full px-6 py-3 bg-graphite hover:bg-slate border border-slate rounded-lg font-semibold text-pearl transition mb-8 text-center">
+                Get started
               </Link>
-              <div className="space-y-4 flex-1">
-                {['50 tracks in library', '3 playlists', 'Audio extraction', 'YouTube search'].map((f) => (
+              <div className="space-y-3 flex-1">
+                {['50 tracks in library', '3 playlists', 'All source search', 'Audio extraction'].map((f) => (
                   <div key={f} className="flex items-center gap-3">
-                    <Check className="w-4 h-4 text-[#00D68F]" />
-                    <span className="text-sm text-[#CCCCD8]">{f}</span>
+                    <Check className="w-4 h-4 text-success" />
+                    <span className="text-sm text-cloud">{f}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Premium Plan */}
-            <div className="bg-gradient-to-b from-[#FF4F2B]/10 to-[#0E0E14] p-8 rounded-xl border border-[#FF4F2B]/30 flex flex-col ring-1 ring-[#FF4F2B]/20">
-              <div className="inline-flex w-fit px-3 py-1 bg-[#FF4F2B] rounded-full text-xs font-semibold mb-4 text-white">
-                Most Popular
+            {/* Premium */}
+            <div className="relative bg-gradient-to-b from-pink/10 to-void p-8 rounded-2xl border border-pink/40 flex flex-col">
+              <div className="absolute -top-3 left-8 inline-flex px-3 py-1 bg-lime rounded-full">
+                <span className="font-mono text-[10px] font-bold tracking-widest uppercase text-ink">Most popular</span>
               </div>
-              <h3 className="font-display text-2xl font-bold text-[#FAFAFC] mb-2">Premium</h3>
-              <p className="text-sm text-[#9898AA] mb-6">Unlimited access to everything</p>
+              <h3 className="font-display font-black text-3xl text-pearl mb-2">Premium</h3>
+              <p className="text-sm text-silver mb-6">Everything unlocked.</p>
               <div className="mb-8">
-                <span className="font-display text-4xl font-bold text-[#FAFAFC]">$4.99</span>
-                <span className="font-mono text-sm text-[#5A5A72] ml-2">/month</span>
+                <span className="font-display font-black text-5xl text-pearl">$4.99</span>
+                <span className="font-mono text-sm text-ash ml-2">/mo</span>
               </div>
-              <Link to="/signup" className="block w-full px-6 py-3 bg-[#FF4F2B] hover:bg-[#E63D1A] rounded-lg font-semibold text-white transition-all duration-200 mb-8 text-center">
-                Start Free Trial
+              <Link to="/signup" className="block w-full px-6 py-3 bg-pink hover:bg-pink-600 rounded-lg font-semibold text-white transition mb-8 text-center">
+                Start free trial
               </Link>
-              <div className="space-y-4 flex-1">
-                {['Everything in Free', 'Unlimited tracks & playlists', 'Multi-source extraction', 'Priority discovery', 'Ad-free experience'].map((f) => (
+              <div className="space-y-3 flex-1">
+                {[
+                  'Everything in Free',
+                  'Unlimited tracks & playlists',
+                  'Priority extraction',
+                  'Full-length streaming',
+                  'Ad-free forever',
+                ].map((f) => (
                   <div key={f} className="flex items-center gap-3">
-                    <Check className="w-4 h-4 text-[#FF4F2B]" />
-                    <span className="text-sm text-[#CCCCD8]">{f}</span>
+                    <Check className="w-4 h-4 text-pink" />
+                    <span className="text-sm text-cloud">{f}</span>
                   </div>
                 ))}
               </div>
@@ -177,46 +258,53 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Footer Section */}
-      <footer className="bg-[#08080C] border-t border-[#FAFAFC]/[0.06] py-12 px-4">
+      {/* Footer */}
+      <footer className="bg-ink border-t border-slate/60 py-16 px-4">
         <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
+          <div className="mb-12">
+            <p className="font-display font-black text-4xl md:text-6xl text-pearl leading-none" style={{ letterSpacing: '-0.03em' }}>
+              Mix <span className="text-pink">everything.</span>
+            </p>
+          </div>
+          <div className="grid md:grid-cols-4 gap-8 mb-10">
             <div>
-              <div className="flex items-center gap-1 mb-4">
-                <span className="font-display text-xl font-bold text-[#FAFAFC]" style={{ letterSpacing: '-0.5px' }}>B<span className="text-[#FF4F2B]">-</span>Side</span>
+              <div className="flex items-center gap-2 mb-4">
+                <LogoMark size={24} />
+                <Wordmark size={20} />
               </div>
-              <p className="text-[#9898AA] text-sm">The crate digger's tool for the streaming age.</p>
+              <p className="text-sm text-silver">The crate digger's tool for the streaming age.</p>
             </div>
             <div>
-              <h4 className="font-semibold text-[#FAFAFC] mb-4 text-sm">Product</h4>
-              <ul className="space-y-2 text-[#9898AA] text-sm">
-                <li><a href="#" className="hover:text-[#FAFAFC] transition-colors">Features</a></li>
-                <li><a href="#" className="hover:text-[#FAFAFC] transition-colors">Pricing</a></li>
-                <li><a href="#" className="hover:text-[#FAFAFC] transition-colors">FAQ</a></li>
+              <h4 className="font-mono text-[11px] font-semibold tracking-[0.2em] uppercase text-ash mb-4">Product</h4>
+              <ul className="space-y-2 text-sm text-silver">
+                <li><a href="#" className="hover:text-white transition">Features</a></li>
+                <li><a href="#" className="hover:text-white transition">Pricing</a></li>
+                <li><a href="#" className="hover:text-white transition">FAQ</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold text-[#FAFAFC] mb-4 text-sm">Company</h4>
-              <ul className="space-y-2 text-[#9898AA] text-sm">
-                <li><a href="#" className="hover:text-[#FAFAFC] transition-colors">About</a></li>
-                <li><a href="#" className="hover:text-[#FAFAFC] transition-colors">Blog</a></li>
-                <li><a href="#" className="hover:text-[#FAFAFC] transition-colors">Careers</a></li>
+              <h4 className="font-mono text-[11px] font-semibold tracking-[0.2em] uppercase text-ash mb-4">Company</h4>
+              <ul className="space-y-2 text-sm text-silver">
+                <li><a href="#" className="hover:text-white transition">About</a></li>
+                <li><a href="#" className="hover:text-white transition">Blog</a></li>
+                <li><a href="#" className="hover:text-white transition">Careers</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold text-[#FAFAFC] mb-4 text-sm">Follow Us</h4>
-              <ul className="space-y-2 text-[#9898AA] text-sm">
-                <li><a href="#" className="hover:text-[#FAFAFC] transition-colors">Twitter</a></li>
-                <li><a href="#" className="hover:text-[#FAFAFC] transition-colors">Instagram</a></li>
-                <li><a href="#" className="hover:text-[#FAFAFC] transition-colors">Discord</a></li>
+              <h4 className="font-mono text-[11px] font-semibold tracking-[0.2em] uppercase text-ash mb-4">Follow</h4>
+              <ul className="space-y-2 text-sm text-silver">
+                <li><a href="#" className="hover:text-white transition">Twitter</a></li>
+                <li><a href="#" className="hover:text-white transition">Instagram</a></li>
+                <li><a href="#" className="hover:text-white transition">Discord</a></li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-[#FAFAFC]/[0.06] pt-8 flex flex-col md:flex-row justify-between items-center text-[#5A5A72] text-sm">
-            <p>&copy; 2026 B-Side. A Bucky Ventures product.</p>
-            <div className="flex gap-6 mt-4 md:mt-0">
-              <a href="#" className="hover:text-[#FAFAFC] transition-colors">Privacy Policy</a>
-              <a href="#" className="hover:text-[#FAFAFC] transition-colors">Terms of Service</a>
+          <div className="border-t border-slate/60 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-ash">
+            <p>&copy; 2026 Mixd. A Bucky Ventures / Grizzilla AI product.</p>
+            <div className="flex gap-6">
+              <a href="#" className="hover:text-white transition">Privacy</a>
+              <a href="#" className="hover:text-white transition">Terms</a>
+              <span className="font-mono text-[10px] tracking-widest uppercase text-smoke">mixd.app</span>
             </div>
           </div>
         </div>

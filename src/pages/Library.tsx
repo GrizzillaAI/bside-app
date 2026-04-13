@@ -165,9 +165,9 @@ export default function Library() {
   return (
     <div className="max-w-4xl">
       {/* Link paste */}
-      <div className="bg-[#0E0E14] border border-[#1E1E2A] rounded-xl p-6 mb-8">
+      <div className="bg-[#0B0B12] border border-[#1A1A28] rounded-xl p-6 mb-8">
         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <LinkIcon className="w-5 h-5 text-[#FF4F2B]" />
+          <LinkIcon className="w-5 h-5 text-[#FF2D87]" />
           Paste a Link
         </h2>
         <div className="flex gap-3">
@@ -177,10 +177,10 @@ export default function Library() {
               value={url}
               onChange={(e) => handleUrlChange(e.target.value)}
               placeholder="https://youtube.com/watch?v=..."
-              className="w-full bg-[#08080C] border border-[#1E1E2A] focus:border-[#FF4F2B] rounded-lg px-4 py-3 text-sm outline-none transition placeholder:text-[#5A5A72]"
+              className="w-full bg-[#050509] border border-[#1A1A28] focus:border-[#FF2D87] rounded-lg px-4 py-3 text-sm outline-none transition placeholder:text-[#5E5E7A]"
             />
             {detectedPlatform && (
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-[#FF4F2B] bg-[#FF4F2B]/10 px-2 py-1 rounded capitalize">
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-[#FF2D87] bg-[#FF2D87]/10 px-2 py-1 rounded capitalize">
                 {detectedPlatform} detected
               </span>
             )}
@@ -188,7 +188,7 @@ export default function Library() {
           <button
             onClick={handleExtract}
             disabled={!url || loading}
-            className="bg-[#FF4F2B] hover:bg-[#E63D1A] disabled:opacity-40 px-6 py-3 rounded-lg text-sm font-semibold transition flex items-center gap-2 shrink-0"
+            className="bg-[#FF2D87] hover:bg-[#E01570] disabled:opacity-40 px-6 py-3 rounded-lg text-sm font-semibold transition flex items-center gap-2 shrink-0"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Music className="w-4 h-4" />}
             {loading ? 'Extracting...' : 'Extract Audio'}
@@ -202,18 +202,18 @@ export default function Library() {
       {/* Library */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-bold">Your Library</h2>
-        <span className="text-sm text-[#5A5A72]">{tracks.length} tracks</span>
+        <span className="text-sm text-[#5E5E7A]">{tracks.length} tracks</span>
       </div>
 
       {loadingTracks ? (
         <div className="text-center py-20">
-          <Loader2 className="w-8 h-8 text-[#FF4F2B] animate-spin mx-auto mb-4" />
-          <p className="text-[#5A5A72]">Loading your library...</p>
+          <Loader2 className="w-8 h-8 text-[#FF2D87] animate-spin mx-auto mb-4" />
+          <p className="text-[#5E5E7A]">Loading your library...</p>
         </div>
       ) : tracks.length === 0 ? (
         <div className="text-center py-20">
-          <Music className="w-12 h-12 text-[#1E1E2A] mx-auto mb-4" />
-          <p className="text-[#5A5A72]">Your library is empty. Paste a link above or search to get started.</p>
+          <Music className="w-12 h-12 text-[#1A1A28] mx-auto mb-4" />
+          <p className="text-[#5E5E7A]">Your library is empty. Paste a link above or search to get started.</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -223,12 +223,12 @@ export default function Library() {
             return (
               <div
                 key={item.id}
-                className="flex items-center gap-4 bg-[#0E0E14] hover:bg-[#16161F] border border-[#1E1E2A] rounded-lg px-4 py-3 transition group"
+                className="flex items-center gap-4 bg-[#0B0B12] hover:bg-[#12121C] border border-[#1A1A28] rounded-lg px-4 py-3 transition group"
               >
                 <button
                   onClick={() => handlePlayTrack(item)}
                   className={`w-10 h-10 rounded-full flex items-center justify-center transition shrink-0 ${
-                    isThis ? 'bg-[#FF4F2B]' : 'bg-[#1E1E2A] group-hover:bg-[#FF4F2B]'
+                    isThis ? 'bg-[#FF2D87]' : 'bg-[#1A1A28] group-hover:bg-[#FF2D87]'
                   }`}
                 >
                   {isThis && isPlaying
@@ -237,21 +237,21 @@ export default function Library() {
                   }
                 </button>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-medium truncate ${isThis ? 'text-[#FF4F2B]' : ''}`}>{t.title}</p>
-                  <p className="text-xs text-[#5A5A72] truncate">{t.artist || 'Unknown Artist'}</p>
+                  <p className={`text-sm font-medium truncate ${isThis ? 'text-[#FF2D87]' : ''}`}>{t.title}</p>
+                  <p className="text-xs text-[#5E5E7A] truncate">{t.artist || 'Unknown Artist'}</p>
                 </div>
-                <span className="text-xs font-medium text-[#FF4F2B] bg-[#FF4F2B]/10 px-2 py-1 rounded shrink-0 uppercase">
+                <span className="text-xs font-medium text-[#FF2D87] bg-[#FF2D87]/10 px-2 py-1 rounded shrink-0 uppercase">
                   {PLATFORM_LABELS[t.source_platform] || t.source_platform}
                 </span>
                 {t.duration_seconds && (
-                  <span className="text-xs text-[#5A5A72] flex items-center gap-1 shrink-0">
+                  <span className="text-xs text-[#5E5E7A] flex items-center gap-1 shrink-0">
                     <Clock className="w-3 h-3" /> {formatTime(t.duration_seconds)}
                   </span>
                 )}
-                <span className="text-xs text-[#5A5A72] shrink-0 w-24 text-right">{formatAdded(item.added_at)}</span>
+                <span className="text-xs text-[#5E5E7A] shrink-0 w-24 text-right">{formatAdded(item.added_at)}</span>
                 <button
                   onClick={() => handleRemove(item.id)}
-                  className="text-[#5A5A72] hover:text-red-400 transition opacity-0 group-hover:opacity-100"
+                  className="text-[#5E5E7A] hover:text-red-400 transition opacity-0 group-hover:opacity-100"
                   title="Remove from library"
                 >
                   <Trash2 className="w-4 h-4" />

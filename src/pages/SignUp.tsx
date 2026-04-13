@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
-import { Music, Loader2, Eye, EyeOff, ArrowLeft, Check } from 'lucide-react';
+import { Loader2, Eye, EyeOff, ArrowLeft, Check } from 'lucide-react';
+import { LogoMark, Wordmark } from '../components/Logo';
 
 export default function SignUp() {
   const { signUp } = useAuth();
@@ -13,6 +14,8 @@ export default function SignUp() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  // Silence TS "declared but never used" — navigate is available for future post-signup redirect.
+  void navigate;
 
   const passwordChecks = {
     length: password.length >= 8,
@@ -39,17 +42,17 @@ export default function SignUp() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-[#08080C] flex items-center justify-center px-4">
+      <div className="min-h-screen bg-ink flex items-center justify-center px-4">
         <div className="w-full max-w-md text-center">
-          <div className="w-16 h-16 rounded-full bg-[#FF4F2B]/20 flex items-center justify-center mx-auto mb-6">
-            <Check className="w-8 h-8 text-[#FF4F2B]" />
+          <div className="w-16 h-16 rounded-full bg-pink/20 flex items-center justify-center mx-auto mb-6">
+            <Check className="w-8 h-8 text-pink" />
           </div>
-          <h1 className="text-2xl font-bold mb-3">Check your email</h1>
-          <p className="text-[#9898AA] mb-8">
+          <h1 className="font-display font-black text-3xl text-pearl mb-3">Check your email.</h1>
+          <p className="text-silver mb-8">
             We sent a confirmation link to <strong className="text-white">{email}</strong>.
-            Click the link to activate your account.
+            Click it to activate your account and start mixing.
           </p>
-          <Link to="/signin" className="text-[#FF4F2B] hover:text-[#FF6B4A] text-sm font-medium transition">
+          <Link to="/signin" className="text-pink hover:text-pink-400 text-sm font-medium transition">
             Back to sign in
           </Link>
         </div>
@@ -58,54 +61,54 @@ export default function SignUp() {
   }
 
   return (
-    <div className="min-h-screen bg-[#08080C] flex items-center justify-center px-4">
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[400px] h-[400px] bg-[#FF4F2B]/10 rounded-full blur-[100px]" />
+    <div className="min-h-screen bg-ink flex items-center justify-center px-4">
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[400px] h-[400px] bg-pink/15 rounded-full blur-[120px] pointer-events-none" />
 
-      <div className="relative w-full max-w-md">
-        <Link to="/" className="inline-flex items-center gap-2 text-[#9898AA] hover:text-white text-sm mb-8 transition">
+      <div className="relative w-full max-w-md py-12">
+        <Link to="/" className="inline-flex items-center gap-2 text-silver hover:text-white text-sm mb-8 transition">
           <ArrowLeft className="w-4 h-4" /> Back to home
         </Link>
 
-        <div className="flex items-center gap-3 mb-2">
-          <Music className="w-8 h-8 text-[#FF4F2B]" />
-          <span className="text-2xl font-bold">B-Side</span>
+        <div className="flex items-center gap-2 mb-8">
+          <LogoMark size={32} />
+          <Wordmark size={26} />
         </div>
-        <h1 className="text-3xl font-bold mb-2">Create your account</h1>
-        <p className="text-[#9898AA] mb-8">Start building your audio library for free</p>
+        <h1 className="font-display font-black text-4xl text-pearl mb-2" style={{ letterSpacing: '-0.03em' }}>Start mixing.</h1>
+        <p className="text-silver mb-8">Free forever. No card. No catch.</p>
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 mb-6 text-sm text-red-400">
+          <div className="bg-error/10 border border-error/30 rounded-lg px-4 py-3 mb-6 text-sm text-error">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-2">Username</label>
+            <label className="block text-sm font-medium mb-2 text-cloud">Username</label>
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="yourname"
               required
-              className="w-full bg-[#0E0E14] border border-[#1E1E2A] focus:border-[#FF4F2B] rounded-lg px-4 py-3 text-sm outline-none transition placeholder:text-[#5A5A72]"
+              className="w-full bg-void border border-slate focus:border-pink rounded-lg px-4 py-3 text-sm outline-none transition placeholder:text-ash"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Email</label>
+            <label className="block text-sm font-medium mb-2 text-cloud">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
               required
-              className="w-full bg-[#0E0E14] border border-[#1E1E2A] focus:border-[#FF4F2B] rounded-lg px-4 py-3 text-sm outline-none transition placeholder:text-[#5A5A72]"
+              className="w-full bg-void border border-slate focus:border-pink rounded-lg px-4 py-3 text-sm outline-none transition placeholder:text-ash"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Password</label>
+            <label className="block text-sm font-medium mb-2 text-cloud">Password</label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -113,12 +116,12 @@ export default function SignUp() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Create a password"
                 required
-                className="w-full bg-[#0E0E14] border border-[#1E1E2A] focus:border-[#FF4F2B] rounded-lg px-4 py-3 pr-12 text-sm outline-none transition placeholder:text-[#5A5A72]"
+                className="w-full bg-void border border-slate focus:border-pink rounded-lg px-4 py-3 pr-12 text-sm outline-none transition placeholder:text-ash"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5A5A72] hover:text-white transition"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-ash hover:text-white transition"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -131,10 +134,10 @@ export default function SignUp() {
                   { check: passwordChecks.number, label: 'One number' },
                 ].map(({ check, label }) => (
                   <div key={label} className="flex items-center gap-2 text-xs">
-                    <div className={`w-4 h-4 rounded-full flex items-center justify-center ${check ? 'bg-[#FF4F2B]' : 'bg-[#1E1E2A]'}`}>
+                    <div className={`w-4 h-4 rounded-full flex items-center justify-center ${check ? 'bg-pink text-white' : 'bg-slate'}`}>
                       {check && <Check className="w-2.5 h-2.5" />}
                     </div>
-                    <span className={check ? 'text-[#9898AA]' : 'text-[#5A5A72]'}>{label}</span>
+                    <span className={check ? 'text-silver' : 'text-ash'}>{label}</span>
                   </div>
                 ))}
               </div>
@@ -144,20 +147,20 @@ export default function SignUp() {
           <button
             type="submit"
             disabled={loading || !passwordValid}
-            className="w-full bg-[#FF4F2B] hover:bg-[#E63D1A] disabled:opacity-50 py-3 rounded-lg text-sm font-semibold transition flex items-center justify-center gap-2 mt-2"
+            className="w-full bg-pink hover:bg-pink-600 disabled:opacity-50 py-3 rounded-lg text-sm font-semibold text-white transition flex items-center justify-center gap-2 mt-2"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-            {loading ? 'Creating account...' : 'Create Account'}
+            {loading ? 'Creating account...' : 'Create account'}
           </button>
         </form>
 
-        <p className="text-center text-xs text-[#5A5A72] mt-4">
-          By signing up, you agree to our Terms of Service and Privacy Policy.
+        <p className="text-center text-xs text-ash mt-4">
+          By signing up, you agree to our Terms and Privacy Policy.
         </p>
 
-        <p className="text-center text-sm text-[#9898AA] mt-6">
+        <p className="text-center text-sm text-silver mt-6">
           Already have an account?{' '}
-          <Link to="/signin" className="text-[#FF4F2B] hover:text-[#FF6B4A] font-medium transition">
+          <Link to="/signin" className="text-pink hover:text-pink-400 font-medium transition">
             Sign in
           </Link>
         </p>

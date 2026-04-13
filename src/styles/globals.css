@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;900&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,30 +6,45 @@
 
 * { box-sizing: border-box; }
 
-body {
+html, body {
   font-family: 'Inter', system-ui, sans-serif;
-  background: #08080C;
-  color: #EEEEF2;
+  background: #050509;
+  color: #EDEDF3;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #08080C; }
-::-webkit-scrollbar-thumb { background: #2A2A3A; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #5A5A72; }
+/* Mixd wordmark — the "x" is horizontally scaled and pink */
+.mixd-x {
+  display: inline-block;
+  transform: scaleX(1.12);
+  transform-origin: center;
+  color: #FF2D87;
+}
+.mixd-x-lg {
+  display: inline-block;
+  transform: scaleX(1.15);
+  transform-origin: center;
+  color: #FF2D87;
+}
 
-/* Smooth transitions — B-Side motion: ease-out 200ms default */
+/* Scrollbar — Mixd Signal Pink on hover */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #050509; }
+::-webkit-scrollbar-thumb { background: #252538; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #FF2D87; }
+
+/* Smooth motion default */
 .transition-default {
   transition: all 0.2s cubic-bezier(0, 0, 0.2, 1);
 }
 
-/* Audio player progress bar — Electric Coral */
+/* Range slider — Signal Pink thumb */
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
   height: 4px;
-  background: #1E1E2A;
+  background: #1A1A28;
   border-radius: 2px;
   outline: none;
 }
@@ -37,11 +52,23 @@ input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 12px;
   height: 12px;
-  background: #FF4F2B;
+  background: #FF2D87;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+input[type="range"]::-webkit-slider-thumb:hover {
+  background: #FF4D9E;
+  transform: scale(1.25);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: #FF2D87;
+  border: none;
   border-radius: 50%;
   cursor: pointer;
 }
-input[type="range"]::-webkit-slider-thumb:hover {
-  background: #FF6B4A;
-  transform: scale(1.2);
-}
+
+/* Selection color */
+::selection { background: #FF2D87; color: #FAFAFC; }
