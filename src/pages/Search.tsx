@@ -259,7 +259,7 @@ export default function Search() {
     setError(null);
 
     try {
-      const data = await searchAll(query.trim(), VISIBLE_SOURCES, 10);
+      const data = await searchAll(query.trim(), VISIBLE_SOURCES, 25);
       setResults(data.results);
       setStatus(data.status);
       setSourceErrors(data.errors);

@@ -116,7 +116,7 @@ export const PHASE_1_SOURCES: SourcePlatform[] = ['youtube', 'spotify', 'soundcl
 export async function searchAll(
   query: string,
   sources: SourcePlatform[] = PHASE_1_SOURCES,
-  perSourceLimit = 10,
+  perSourceLimit = 25,
 ): Promise<{ results: UnifiedResult[]; status: MultiSourceStatus; errors: Record<string, string> }> {
   const status: MultiSourceStatus = {
     youtube: 'skipped',
@@ -301,10 +301,19 @@ export async function saveTrackToLibrary(track: {
   source_url: string;
   source_id: string;
   thumbnail_url: string;
-  duration_seconds: number;
+  duration_seconds: number | null;
 }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not signed in');
+
+  // Normalize duration — if the source didn't return a valid duration,
+  // send null rather than 0 or NaN so the DB check constraint is satisfied.
+  const dur =
+    typeof track.duration_seconds === 'number' &&
+    Number.isFinite(track.duration_seconds) &&
+    track.duration_seconds > 0
+      ? Math.round(track.duration_seconds)
+      : null;
 
   // Upsert the track
   const { data: trackRow, error: trackErr } = await supabase
@@ -317,7 +326,7 @@ export async function saveTrackToLibrary(track: {
       source_url: track.source_url,
       source_id: track.source_id,
       thumbnail_url: track.thumbnail_url,
-      duration_seconds: track.duration_seconds,
+      duration_seconds: dur,
     }, { onConflict: 'user_id,source_platform,source_id' })
     .select()
     .single();
