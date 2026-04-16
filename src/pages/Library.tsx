@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Play, Pause, Clock, Music, Link as LinkIcon, Loader2, Trash2, Plus } from 'lucide-react';
 import { usePlayer, formatTime } from '../lib/player';
 import type { PlayerTrack } from '../lib/player';
-import { extractAudio, saveTrackToLibrary } from '../lib/api';
+import { saveTrackToLibrary } from '../lib/api';
 import { supabase } from '../lib/supabase';
 
 /** Detect platform from URL */
@@ -75,43 +75,62 @@ export default function Library() {
     setExtractError(null);
   };
 
+  /** Extract a YouTube video ID from a URL */
+  function extractYouTubeId(urlStr: string): string | null {
+    try {
+      const u = new URL(urlStr);
+      if (u.hostname.includes('youtu.be')) return u.pathname.slice(1).split('/')[0];
+      if (u.hostname.includes('youtube.com')) return u.searchParams.get('v');
+    } catch { /* not a valid URL */ }
+    return null;
+  }
+
   const handleExtract = async () => {
     if (!url) return;
     setLoading(true);
     setExtractError(null);
 
     try {
-      // Extract audio
-      const result = await extractAudio(url);
+      const platform = detectPlatform(url);
 
-      // Save to DB
-      await saveTrackToLibrary({
-        title: result.title || 'Untitled Track',
-        artist: result.artist || 'Unknown Artist',
-        source_platform: result.source_platform,
-        source_url: result.source_url,
-        source_id: result.source_id,
-        thumbnail_url: result.thumbnail_url,
-        duration_seconds: result.duration_seconds,
-      });
+      if (platform === 'youtube') {
+        // YouTube: parse video ID from URL, play via iframe (no extraction needed)
+        const videoId = extractYouTubeId(url);
+        if (!videoId) {
+          setExtractError('Could not parse a YouTube video ID from this URL');
+          setLoading(false);
+          return;
+        }
 
-      // Play it
-      const playerTrack: PlayerTrack = {
-        title: result.title || 'Untitled Track',
-        artist: result.artist || 'Unknown Artist',
-        thumbnail_url: result.thumbnail_url,
-        audio_url: result.audio_url,
-        duration_seconds: result.duration_seconds,
-        source_platform: result.source_platform,
-        source_id: result.source_id,
-        source_url: result.source_url,
-      };
-      play(playerTrack);
+        const thumbUrl = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
 
-      // Refresh library list
-      await loadTracks();
-      setUrl('');
-      setDetectedPlatform(null);
+        await saveTrackToLibrary({
+          title: 'YouTube Video',  // We don't have metadata without an API call
+          artist: 'Unknown',
+          source_platform: 'youtube',
+          source_url: url,
+          source_id: videoId,
+          thumbnail_url: thumbUrl,
+          duration_seconds: null,
+        });
+
+        play({
+          title: 'YouTube Video',
+          artist: 'Unknown',
+          thumbnail_url: thumbUrl,
+          audio_url: '',
+          duration_seconds: 0,
+          source_platform: 'youtube',
+          source_id: videoId,
+          source_url: url,
+        });
+
+        await loadTracks();
+        setUrl('');
+        setDetectedPlatform(null);
+      } else {
+        setExtractError('Paste a YouTube URL to add it. For Spotify and SoundCloud, use Search.');
+      }
     } catch (e) {
       setExtractError((e as Error).message);
     }
@@ -126,23 +145,21 @@ export default function Library() {
       return;
     }
 
-    // Need to extract audio URL
-    try {
-      const result = await extractAudio(t.source_url);
-      play({
-        id: t.id,
-        title: t.title,
-        artist: t.artist || 'Unknown Artist',
-        thumbnail_url: t.thumbnail_url || '',
-        audio_url: result.audio_url,
-        duration_seconds: t.duration_seconds || 0,
-        source_platform: t.source_platform,
-        source_id: t.source_id || '',
-        source_url: t.source_url,
-      });
-    } catch (e) {
-      console.error('Playback failed:', e);
-    }
+    // YouTube: play via iframe (source_id is the video ID)
+    // SoundCloud/other: audio_url would need to come from search results
+    // For library items we just pass what we have — YouTube plays via iframe,
+    // others play via the HTML audio backend if they have a stream URL.
+    play({
+      id: t.id,
+      title: t.title,
+      artist: t.artist || 'Unknown Artist',
+      thumbnail_url: t.thumbnail_url || '',
+      audio_url: '',  // YouTube uses iframe; other platforms use stream_url from search
+      duration_seconds: t.duration_seconds || 0,
+      source_platform: t.source_platform,
+      source_id: t.source_id || '',
+      source_url: t.source_url,
+    });
   };
 
   const handleRemove = async (libraryTrackId: string) => {

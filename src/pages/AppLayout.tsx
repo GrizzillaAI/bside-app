@@ -5,6 +5,7 @@ import { usePlayer, formatTime } from '../lib/player';
 import { LogoMark, Wordmark } from '../components/Logo';
 import PlaybackModeToggle from '../components/PlaybackModeToggle';
 import SkippedTracksBanner from '../components/SkippedTracksBanner';
+import YouTubeEmbed from '../components/YouTubeEmbed';
 
 const navItems = [
   { to: '/app', icon: Home, label: 'Home', end: true },
@@ -19,6 +20,7 @@ export default function AppLayout() {
   const {
     currentTrack, isPlaying, currentTime, duration, volume,
     togglePlayPause, seek, setVolume, skipNext, skipPrev,
+    youtubeVideoId, onYouTubeStateChange, onYouTubeTimeUpdate, onYouTubeReady, youtubeRef,
   } = usePlayer();
 
   const handleSignOut = async () => {
@@ -94,15 +96,27 @@ export default function AppLayout() {
 
         {/* Player bar */}
         <div className="h-20 bg-void border-t border-slate px-6 flex items-center gap-6 shrink-0">
-          {/* Track info */}
+          {/* Track info + YouTube embed */}
           <div className="flex items-center gap-3 w-64 shrink-0">
-            <div className="w-12 h-12 rounded-lg bg-graphite flex items-center justify-center shrink-0 overflow-hidden">
-              {currentTrack?.thumbnail_url ? (
-                <img src={currentTrack.thumbnail_url} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <Music className="w-5 h-5 text-ash" />
-              )}
-            </div>
+            {youtubeVideoId ? (
+              <YouTubeEmbed
+                ref={youtubeRef}
+                videoId={youtubeVideoId}
+                isPlaying={isPlaying}
+                volume={volume}
+                onStateChange={onYouTubeStateChange}
+                onTimeUpdate={onYouTubeTimeUpdate}
+                onReady={onYouTubeReady}
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-lg bg-graphite flex items-center justify-center shrink-0 overflow-hidden">
+                {currentTrack?.thumbnail_url ? (
+                  <img src={currentTrack.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <Music className="w-5 h-5 text-ash" />
+                )}
+              </div>
+            )}
             <div className="min-w-0">
               <p className="text-sm font-medium truncate text-pearl">
                 {currentTrack?.title ?? 'No track playing'}

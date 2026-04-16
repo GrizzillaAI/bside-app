@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { usePlayer } from '../lib/player';
 import type { PlayerTrack } from '../lib/player';
-import { searchAll, extractAudio, saveTrackToLibrary, PHASE_1_SOURCES } from '../lib/api';
+import { searchAll, saveTrackToLibrary, PHASE_1_SOURCES } from '../lib/api';
 import type { UnifiedResult, SourcePlatform, MultiSourceStatus } from '../lib/api';
 import {
   beginSpotifyOAuth, getMySpotifyConnection, type SpotifyConnection,
@@ -73,15 +73,13 @@ function ResultCard({
         return;
       }
 
-      let audioUrl: string | null = null;
-      if (result.source_platform === 'youtube') {
-        const audio = await extractAudio(result.source_id);
-        audioUrl = audio.audio_url;
-      } else if (result.stream_url) {
-        audioUrl = result.stream_url;
-      }
+      // YouTube: pass video ID directly — the YouTube IFrame embed handles playback
+      // SoundCloud: use the stream_url from the search result
+      const audioUrl = result.source_platform === 'youtube'
+        ? ''  // YouTube doesn't use audio_url — the iframe plays the video
+        : (result.stream_url ?? '');
 
-      if (!audioUrl) {
+      if (!audioUrl && result.source_platform !== 'youtube') {
         setError('No playback available for this track');
         setLoading(false);
         return;

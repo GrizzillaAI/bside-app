@@ -1,7 +1,8 @@
 // Mixd Global Audio Player Context
-// Dispatches between two playback backends:
-//   1) HTML Audio element — YouTube (extracted), SoundCloud streams
+// Dispatches between three playback backends:
+//   1) HTML Audio element — SoundCloud streams
 //   2) Spotify Web Playback SDK — for spotify:track:XXX URIs (Premium users)
+//   3) YouTube IFrame Player API — official ToS-compliant video embed
 //
 // Playback Mode integration (Watch / Listen):
 //   - Listen mode + device background → YouTube tracks auto-skip via
@@ -11,7 +12,7 @@
 //
 // This context is designed to be portable: the queue-manager.ts logic is
 // framework-agnostic and the platform-specific pieces (HTML audio, Spotify
-// Web SDK) are swapped for native equivalents on React Native.
+// Web SDK, YouTube IFrame) are swapped for native equivalents on React Native.
 
 import {
   createContext, useContext, useRef, useState, useCallback, useEffect, ReactNode,
@@ -33,7 +34,7 @@ export interface PlayerTrack {
   title: string;
   artist: string;
   thumbnail_url: string;
-  audio_url: string;      // HTML audio URL, OR spotify:track:XXX URI
+  audio_url: string;      // HTML audio URL, spotify:track:XXX URI, or empty for YouTube
   duration_seconds: number;
   source_platform: string;
   source_id: string;
@@ -47,6 +48,8 @@ interface PlayerState {
   duration: number;
   volume: number;
   queue: PlayerTrack[];
+  // YouTube embed state — exposed so AppLayout can render the embed
+  youtubeVideoId: string | null;
   play: (track: PlayerTrack) => void;
   pause: () => void;
   resume: () => void;
@@ -56,15 +59,21 @@ interface PlayerState {
   skipNext: () => void;
   skipPrev: () => void;
   addToQueue: (track: PlayerTrack) => void;
+  // YouTube embed callbacks — called by the YouTubeEmbed component
+  onYouTubeStateChange: (state: 'playing' | 'paused' | 'ended' | 'buffering') => void;
+  onYouTubeTimeUpdate: (currentTime: number, duration: number) => void;
+  onYouTubeReady: () => void;
+  youtubeRef: React.MutableRefObject<{ seek: (s: number) => void; play: () => void; pause: () => void } | null>;
 }
 
 const PlayerContext = createContext<PlayerState | undefined>(undefined);
 
-type Backend = 'html' | 'spotify';
+type Backend = 'html' | 'spotify' | 'youtube';
 
 function backendFor(track: PlayerTrack): Backend {
   if (track.source_platform === 'spotify') return 'spotify';
-  if (track.audio_url.startsWith('spotify:')) return 'spotify';
+  if (track.audio_url?.startsWith('spotify:')) return 'spotify';
+  if (track.source_platform === 'youtube') return 'youtube';
   return 'html';
 }
 
@@ -111,6 +120,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const backendRef = useRef<Backend>('html');
   const spotifyStateCleanupRef = useRef<(() => void) | null>(null);
+  const youtubeRef = useRef<{ seek: (s: number) => void; play: () => void; pause: () => void } | null>(null);
   const [currentTrack, setCurrentTrack] = useState<PlayerTrack | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -118,6 +128,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [volume, setVolumeState] = useState(0.75);
   const [queue, setQueue] = useState<PlayerTrack[]>([]);
   const [historyStack, setHistoryStack] = useState<PlayerTrack[]>([]);
+  const [youtubeVideoId, setYoutubeVideoId] = useState<string | null>(null);
 
   // Live refs so our callbacks always see the latest mode/deviceState
   // without having to be re-memoized on every change.
@@ -125,6 +136,29 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const deviceStateRef = useRef(deviceState);
   useEffect(() => { modeRef.current = mode; }, [mode]);
   useEffect(() => { deviceStateRef.current = deviceState; }, [deviceState]);
+
+  // YouTube embed callbacks — these are called by the YouTubeEmbed component
+  const onYouTubeStateChange = useCallback((state: 'playing' | 'paused' | 'ended' | 'buffering') => {
+    if (backendRef.current !== 'youtube') return;
+    if (state === 'playing') setIsPlaying(true);
+    if (state === 'paused') setIsPlaying(false);
+    if (state === 'ended') {
+      setIsPlaying(false);
+      // Use setTimeout to avoid state-update-during-render
+      setTimeout(() => advanceQueue(), 0);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const onYouTubeTimeUpdate = useCallback((time: number, dur: number) => {
+    if (backendRef.current !== 'youtube') return;
+    setCurrentTime(time);
+    setDuration(dur);
+  }, []);
+
+  const onYouTubeReady = useCallback(() => {
+    // Player is initialized and ready to accept commands
+  }, []);
 
   // Advance to the next playable track under current mode + device state.
   // Any skipped tracks are recorded for attribution + surfaced to the UI.
@@ -221,10 +255,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const audio = audioRef.current;
     const nextBackend = backendFor(track);
 
-    // Stop the "other" backend when switching
+    // Stop the "other" backend(s) when switching
     if (backendRef.current !== nextBackend) {
       if (backendRef.current === 'html') audio?.pause();
       if (backendRef.current === 'spotify') await pauseSpotify();
+      if (backendRef.current === 'youtube') youtubeRef.current?.pause();
     }
     backendRef.current = nextBackend;
 
@@ -235,6 +270,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     });
 
     if (nextBackend === 'spotify') {
+      // Clear YouTube video when switching away
+      setYoutubeVideoId(null);
       const ok = await playSpotifyTrack(track.audio_url);
       if (!ok) {
         console.warn('Spotify playback failed — user may not be Premium or not connected');
@@ -248,7 +285,17 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // HTML audio path
+    if (nextBackend === 'youtube') {
+      // Set the video ID — the YouTubeEmbed component will handle playback
+      setYoutubeVideoId(track.source_id);
+      setDuration(track.duration_seconds);
+      setCurrentTime(0);
+      setIsPlaying(true);
+      return;
+    }
+
+    // HTML audio path (SoundCloud, etc.)
+    setYoutubeVideoId(null);
     if (!audio) return;
     audio.src = track.audio_url;
     audio.play().catch((e) => console.warn('Playback blocked:', e));
@@ -275,11 +322,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const pause = useCallback(() => {
     if (backendRef.current === 'spotify') pauseSpotify();
+    else if (backendRef.current === 'youtube') youtubeRef.current?.pause();
     else audioRef.current?.pause();
   }, []);
 
   const resume = useCallback(() => {
     if (backendRef.current === 'spotify') resumeSpotify();
+    else if (backendRef.current === 'youtube') youtubeRef.current?.play();
     else audioRef.current?.play();
   }, []);
 
@@ -291,6 +340,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const seek = useCallback((time: number) => {
     if (backendRef.current === 'spotify') {
       seekSpotify(time * 1000);
+    } else if (backendRef.current === 'youtube') {
+      youtubeRef.current?.seek(time);
     } else if (audioRef.current) {
       audioRef.current.currentTime = time;
     }
@@ -300,6 +351,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setVolumeState(vol);
     if (audioRef.current) audioRef.current.volume = vol;
     setSpotifyVolume(vol).catch(() => { /* ignore */ });
+    // YouTube volume is synced via the YouTubeEmbed prop
   }, []);
 
   const skipNext = useCallback(() => {
@@ -342,6 +394,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         duration,
         volume,
         queue,
+        youtubeVideoId,
         play,
         pause,
         resume,
@@ -351,6 +404,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         skipNext,
         skipPrev,
         addToQueue,
+        onYouTubeStateChange,
+        onYouTubeTimeUpdate,
+        onYouTubeReady,
+        youtubeRef,
       }}
     >
       {children}
