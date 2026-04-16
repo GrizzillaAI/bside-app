@@ -4,6 +4,7 @@ import { useAuth } from '../lib/auth';
 import { usePlayer, formatTime } from '../lib/player';
 import { LogoMark, Wordmark } from '../components/Logo';
 import YouTubeEmbed from '../components/YouTubeEmbed';
+import SoundCloudEmbed from '../components/SoundCloudEmbed';
 
 const navItems = [
   { to: '/app', icon: Home, label: 'Home', end: true },
@@ -19,6 +20,7 @@ export default function AppLayout() {
     currentTrack, isPlaying, currentTime, duration, volume, playbackError,
     togglePlayPause, seek, setVolume, skipNext, skipPrev,
     youtubeVideoId, onYouTubeStateChange, onYouTubeTimeUpdate, onYouTubeReady, youtubeRef,
+    soundcloudTrackUrl, onSoundCloudStateChange, onSoundCloudTimeUpdate, onSoundCloudReady, soundcloudRef,
   } = usePlayer();
 
   const handleSignOut = async () => {
@@ -98,7 +100,7 @@ export default function AppLayout() {
 
         {/* Player bar */}
         <div className="h-20 bg-void border-t border-slate px-6 flex items-center gap-6 shrink-0">
-          {/* Track info + YouTube embed */}
+          {/* Track info + embed (YouTube / SoundCloud / thumbnail) */}
           <div className="flex items-center gap-3 w-64 shrink-0">
             {youtubeVideoId ? (
               <YouTubeEmbed
@@ -109,6 +111,16 @@ export default function AppLayout() {
                 onStateChange={onYouTubeStateChange}
                 onTimeUpdate={onYouTubeTimeUpdate}
                 onReady={onYouTubeReady}
+              />
+            ) : soundcloudTrackUrl ? (
+              <SoundCloudEmbed
+                ref={soundcloudRef}
+                trackUrl={soundcloudTrackUrl}
+                isPlaying={isPlaying}
+                volume={volume}
+                onStateChange={onSoundCloudStateChange}
+                onTimeUpdate={onSoundCloudTimeUpdate}
+                onReady={onSoundCloudReady}
               />
             ) : (
               <div className="w-12 h-12 rounded-lg bg-graphite flex items-center justify-center shrink-0 overflow-hidden">

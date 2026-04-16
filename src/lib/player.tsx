@@ -36,6 +36,8 @@ interface PlayerState {
   playbackError: string | null;
   // YouTube embed state — exposed so AppLayout can render the embed
   youtubeVideoId: string | null;
+  // SoundCloud embed state — exposed so AppLayout can render the embed
+  soundcloudTrackUrl: string | null;
   play: (track: PlayerTrack) => void;
   pause: () => void;
   resume: () => void;
@@ -50,16 +52,22 @@ interface PlayerState {
   onYouTubeTimeUpdate: (currentTime: number, duration: number) => void;
   onYouTubeReady: () => void;
   youtubeRef: React.MutableRefObject<{ seek: (s: number) => void; play: () => void; pause: () => void } | null>;
+  // SoundCloud embed callbacks — called by the SoundCloudEmbed component
+  onSoundCloudStateChange: (state: 'playing' | 'paused' | 'ended' | 'buffering') => void;
+  onSoundCloudTimeUpdate: (currentTime: number, duration: number) => void;
+  onSoundCloudReady: () => void;
+  soundcloudRef: React.MutableRefObject<{ seek: (s: number) => void; play: () => void; pause: () => void } | null>;
 }
 
 const PlayerContext = createContext<PlayerState | undefined>(undefined);
 
-type Backend = 'html' | 'spotify' | 'youtube';
+type Backend = 'html' | 'spotify' | 'youtube' | 'soundcloud';
 
 function backendFor(track: PlayerTrack): Backend {
   if (track.source_platform === 'spotify') return 'spotify';
   if (track.audio_url?.startsWith('spotify:')) return 'spotify';
   if (track.source_platform === 'youtube') return 'youtube';
+  if (track.source_platform === 'soundcloud') return 'soundcloud';
   return 'html';
 }
 
@@ -69,6 +77,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const backendRef = useRef<Backend>('html');
   const spotifyStateCleanupRef = useRef<(() => void) | null>(null);
   const youtubeRef = useRef<{ seek: (s: number) => void; play: () => void; pause: () => void } | null>(null);
+  const soundcloudRef = useRef<{ seek: (s: number) => void; play: () => void; pause: () => void } | null>(null);
   const [currentTrack, setCurrentTrack] = useState<PlayerTrack | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -77,6 +86,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [queue, setQueue] = useState<PlayerTrack[]>([]);
   const [historyStack, setHistoryStack] = useState<PlayerTrack[]>([]);
   const [youtubeVideoId, setYoutubeVideoId] = useState<string | null>(null);
+  const [soundcloudTrackUrl, setSoundcloudTrackUrl] = useState<string | null>(null);
   const [playbackError, setPlaybackError] = useState<string | null>(null);
 
   // YouTube embed callbacks — these are called by the YouTubeEmbed component
@@ -100,6 +110,28 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const onYouTubeReady = useCallback(() => {
     // Player is initialized and ready to accept commands
+  }, []);
+
+  // SoundCloud embed callbacks — these are called by the SoundCloudEmbed component
+  const onSoundCloudStateChange = useCallback((state: 'playing' | 'paused' | 'ended' | 'buffering') => {
+    if (backendRef.current !== 'soundcloud') return;
+    if (state === 'playing') setIsPlaying(true);
+    if (state === 'paused') setIsPlaying(false);
+    if (state === 'ended') {
+      setIsPlaying(false);
+      setTimeout(() => advanceQueue(), 0);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const onSoundCloudTimeUpdate = useCallback((time: number, dur: number) => {
+    if (backendRef.current !== 'soundcloud') return;
+    setCurrentTime(time);
+    setDuration(dur);
+  }, []);
+
+  const onSoundCloudReady = useCallback(() => {
+    // Widget is initialized and ready to accept commands
   }, []);
 
   // Advance to the next track in the queue.
@@ -174,6 +206,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       if (backendRef.current === 'html') audio?.pause();
       if (backendRef.current === 'spotify') await pauseSpotify();
       if (backendRef.current === 'youtube') youtubeRef.current?.pause();
+      if (backendRef.current === 'soundcloud') soundcloudRef.current?.pause();
     }
     backendRef.current = nextBackend;
 
@@ -184,8 +217,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     });
 
     if (nextBackend === 'spotify') {
-      // Clear YouTube video when switching away
+      // Clear other embeds when switching away
       setYoutubeVideoId(null);
+      setSoundcloudTrackUrl(null);
       const ok = await playSpotifyTrack(track.audio_url);
       if (!ok) {
         console.warn('Spotify playback failed — user may not be Premium or not connected');
@@ -202,6 +236,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
     if (nextBackend === 'youtube') {
       // Set the video ID — the YouTubeEmbed component will handle playback
+      setSoundcloudTrackUrl(null);
       setYoutubeVideoId(track.source_id);
       setDuration(track.duration_seconds);
       setCurrentTime(0);
@@ -209,8 +244,19 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // HTML audio path (SoundCloud, etc.)
+    if (nextBackend === 'soundcloud') {
+      // Set the track permalink URL — the SoundCloudEmbed component will handle playback
+      setYoutubeVideoId(null);
+      setSoundcloudTrackUrl(track.source_url);
+      setDuration(track.duration_seconds);
+      setCurrentTime(0);
+      setIsPlaying(true);
+      return;
+    }
+
+    // HTML audio path (fallback)
     setYoutubeVideoId(null);
+    setSoundcloudTrackUrl(null);
     if (!audio) return;
     audio.src = track.audio_url;
     audio.play().catch((e) => console.warn('Playback blocked:', e));
@@ -224,12 +270,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const pause = useCallback(() => {
     if (backendRef.current === 'spotify') pauseSpotify();
     else if (backendRef.current === 'youtube') youtubeRef.current?.pause();
+    else if (backendRef.current === 'soundcloud') soundcloudRef.current?.pause();
     else audioRef.current?.pause();
   }, []);
 
   const resume = useCallback(() => {
     if (backendRef.current === 'spotify') resumeSpotify();
     else if (backendRef.current === 'youtube') youtubeRef.current?.play();
+    else if (backendRef.current === 'soundcloud') soundcloudRef.current?.play();
     else audioRef.current?.play();
   }, []);
 
@@ -243,6 +291,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       seekSpotify(time * 1000);
     } else if (backendRef.current === 'youtube') {
       youtubeRef.current?.seek(time);
+    } else if (backendRef.current === 'soundcloud') {
+      soundcloudRef.current?.seek(time);
     } else if (audioRef.current) {
       audioRef.current.currentTime = time;
     }
@@ -283,6 +333,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         queue,
         playbackError,
         youtubeVideoId,
+        soundcloudTrackUrl,
         play,
         pause,
         resume,
@@ -296,6 +347,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         onYouTubeTimeUpdate,
         onYouTubeReady,
         youtubeRef,
+        onSoundCloudStateChange,
+        onSoundCloudTimeUpdate,
+        onSoundCloudReady,
+        soundcloudRef,
       }}
     >
       {children}
