@@ -181,6 +181,21 @@ export async function searchAll(
 }
 
 // ---------------------------------------------------------------------------
+// SoundCloud Stream Resolver
+// Resolves a CORS-safe CDN URL for a SoundCloud track. The API stream URL
+// returns a 302 redirect that browsers can't follow due to CORS, so we
+// resolve it server-side and return the final CDN URL.
+// ---------------------------------------------------------------------------
+export async function resolveSoundCloudStream(trackId: string): Promise<string> {
+  const { data, error } = await supabase.functions.invoke('soundcloud-resolve', {
+    body: { trackId },
+  });
+  if (error) throw new Error(error.message);
+  if (!data?.stream_url) throw new Error('No stream URL returned');
+  return data.stream_url;
+}
+
+// ---------------------------------------------------------------------------
 // Audio Extraction
 // ---------------------------------------------------------------------------
 export interface ExtractionResult {

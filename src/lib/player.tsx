@@ -3,16 +3,6 @@
 //   1) HTML Audio element — SoundCloud streams
 //   2) Spotify Web Playback SDK — for spotify:track:XXX URIs (Premium users)
 //   3) YouTube IFrame Player API — official ToS-compliant video embed
-//
-// Playback Mode integration (Watch / Listen):
-//   - Listen mode + device background → YouTube tracks auto-skip via
-//     queue-manager.nextPlayableTrack. Skipped entries are pushed to the
-//     PlaybackMode context so the UI can show "played while you were away".
-//   - Creator attribution events are fired for every skipped track.
-//
-// This context is designed to be portable: the queue-manager.ts logic is
-// framework-agnostic and the platform-specific pieces (HTML audio, Spotify
-// Web SDK, YouTube IFrame) are swapped for native equivalents on React Native.
 
 import {
   createContext, useContext, useRef, useState, useCallback, useEffect, ReactNode,
@@ -21,11 +11,6 @@ import {
   playSpotifyTrack, pauseSpotify, resumeSpotify, seekSpotify,
   setSpotifyVolume, onSpotifyStateChanged,
 } from './spotify';
-import {
-  QueueTrack, nextPlayableTrack, attributionEventFromSkip,
-} from './queue-manager';
-import { usePlaybackMode } from './playbackMode';
-import { supabase } from './supabase';
 
 // Compatibility type — the existing app passes "PlayerTrack" objects that
 // are a superset of QueueTrack. We accept either and narrow as needed.
@@ -48,6 +33,7 @@ interface PlayerState {
   duration: number;
   volume: number;
   queue: PlayerTrack[];
+  playbackError: string | null;
   // YouTube embed state — exposed so AppLayout can render the embed
   youtubeVideoId: string | null;
   play: (track: PlayerTrack) => void;
@@ -77,45 +63,7 @@ function backendFor(track: PlayerTrack): Backend {
   return 'html';
 }
 
-// Coerce a PlayerTrack into the QueueTrack shape expected by the queue manager
-function toQueueTrack(t: PlayerTrack): QueueTrack {
-  return {
-    id: t.id ?? `${t.source_platform}:${t.source_id}`,
-    title: t.title,
-    artist: t.artist,
-    thumbnail_url: t.thumbnail_url,
-    audio_url: t.audio_url,
-    duration_seconds: t.duration_seconds,
-    source_platform: (t.source_platform as QueueTrack['source_platform']),
-    source_id: t.source_id,
-    source_url: t.source_url,
-  };
-}
-
-// Fire an attribution event to the analytics table. Non-blocking, best-effort.
-function recordAttributionEvents(events: ReturnType<typeof attributionEventFromSkip>[]) {
-  if (events.length === 0) return;
-  (async () => {
-    try {
-      await supabase.from('play_events').insert(
-        events.map((e) => ({
-          track_id: e.track_id,
-          source_platform: e.source_platform,
-          source_id: e.source_id,
-          event_type: e.event_type,
-          playback_mode: e.playback_mode,
-          device_state: e.device_state,
-          occurred_at: e.occurred_at,
-        }))
-      );
-    } catch {
-      // Attribution is best-effort — the UI should not fail if analytics does.
-    }
-  })();
-}
-
 export function PlayerProvider({ children }: { children: ReactNode }) {
-  const { mode, deviceState, pushSkipped, setHaltedForTooManySkips } = usePlaybackMode();
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const backendRef = useRef<Backend>('html');
@@ -129,13 +77,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [queue, setQueue] = useState<PlayerTrack[]>([]);
   const [historyStack, setHistoryStack] = useState<PlayerTrack[]>([]);
   const [youtubeVideoId, setYoutubeVideoId] = useState<string | null>(null);
-
-  // Live refs so our callbacks always see the latest mode/deviceState
-  // without having to be re-memoized on every change.
-  const modeRef = useRef(mode);
-  const deviceStateRef = useRef(deviceState);
-  useEffect(() => { modeRef.current = mode; }, [mode]);
-  useEffect(() => { deviceStateRef.current = deviceState; }, [deviceState]);
+  const [playbackError, setPlaybackError] = useState<string | null>(null);
 
   // YouTube embed callbacks — these are called by the YouTubeEmbed component
   const onYouTubeStateChange = useCallback((state: 'playing' | 'paused' | 'ended' | 'buffering') => {
@@ -160,48 +102,19 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     // Player is initialized and ready to accept commands
   }, []);
 
-  // Advance to the next playable track under current mode + device state.
-  // Any skipped tracks are recorded for attribution + surfaced to the UI.
+  // Advance to the next track in the queue.
   const advanceQueue = useCallback(() => {
     setQueue((q) => {
-      if (q.length === 0) return q;
-      const qt = q.map(toQueueTrack);
-      const { track, skipped, remainingQueue, haltReason } =
-        nextPlayableTrack(qt, modeRef.current, deviceStateRef.current);
-
-      if (skipped.length > 0) {
-        pushSkipped(skipped);
-        recordAttributionEvents(
-          skipped.map((s) => attributionEventFromSkip(s, modeRef.current))
-        );
-      }
-
-      if (haltReason === 'too_many_consecutive_skips') {
-        setHaltedForTooManySkips(true);
+      if (q.length === 0) {
         setIsPlaying(false);
-        return q; // Keep the queue intact — user unlocks and unhalts.
+        return q;
       }
-
-      if (!track) {
-        setIsPlaying(false);
-        return [];
-      }
-
-      // Find the original PlayerTrack (preserve any extra fields the queue
-      // manager's pure type doesn't know about).
-      const idx = q.findIndex(
-        (x) => (x.id ?? `${x.source_platform}:${x.source_id}`) === track.id
-      );
-      const original = idx >= 0 ? q[idx] : q[0];
-      setTimeout(() => playTrack(original), 0);
-      // Rebuild queue as the remainingQueue, mapped back to PlayerTrack.
-      const remainingIds = new Set(remainingQueue.map((r) => r.id));
-      return q.filter(
-        (x) => remainingIds.has(x.id ?? `${x.source_platform}:${x.source_id}`)
-      );
+      const [next, ...rest] = q;
+      setTimeout(() => playTrack(next), 0);
+      return rest;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pushSkipped, setHaltedForTooManySkips]);
+  }, []);
 
   // Create HTML audio element once
   useEffect(() => {
@@ -254,6 +167,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const playTrack = useCallback(async (track: PlayerTrack) => {
     const audio = audioRef.current;
     const nextBackend = backendFor(track);
+    setPlaybackError(null);
 
     // Stop the "other" backend(s) when switching
     if (backendRef.current !== nextBackend) {
@@ -275,6 +189,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       const ok = await playSpotifyTrack(track.audio_url);
       if (!ok) {
         console.warn('Spotify playback failed — user may not be Premium or not connected');
+        setPlaybackError('Spotify playback failed. Make sure you have a Premium account and are connected in Settings.');
         setIsPlaying(false);
         return;
       }
@@ -301,24 +216,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     audio.play().catch((e) => console.warn('Playback blocked:', e));
   }, [subscribeSpotifyState]);
 
-  // External "play" entrypoint: runs the skip-policy check BEFORE playing.
-  // If the track itself should be skipped (e.g., user tapped a YouTube track
-  // while already in Listen + background), the manager skips and advances.
+  // External "play" entrypoint — directly starts playback of the given track.
   const play = useCallback((track: PlayerTrack) => {
-    const qt = toQueueTrack(track);
-    const { track: chosen, skipped } = nextPlayableTrack(
-      [qt],
-      modeRef.current,
-      deviceStateRef.current
-    );
-    if (skipped.length > 0) {
-      pushSkipped(skipped);
-      recordAttributionEvents(
-        skipped.map((s) => attributionEventFromSkip(s, modeRef.current))
-      );
-    }
-    if (chosen) playTrack(track);
-  }, [playTrack, pushSkipped]);
+    playTrack(track);
+  }, [playTrack]);
 
   const pause = useCallback(() => {
     if (backendRef.current === 'spotify') pauseSpotify();
@@ -371,20 +272,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setQueue((q) => [...q, track]);
   }, []);
 
-  // If the currently-playing track is a video-only source and the device
-  // just went to background in Listen mode, pause (we don't force-skip
-  // the track the user explicitly started, we just halt it). On unfocus
-  // back to foreground, the user can resume; the queue-advance logic
-  // handles subsequent tracks.
-  useEffect(() => {
-    if (!currentTrack) return;
-    const isVideoOnly = currentTrack.source_platform === 'youtube';
-    if (modeRef.current === 'listen' && deviceState !== 'foreground' && isVideoOnly) {
-      pause();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deviceState, currentTrack]);
-
   return (
     <PlayerContext.Provider
       value={{
@@ -394,6 +281,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         duration,
         volume,
         queue,
+        playbackError,
         youtubeVideoId,
         play,
         pause,

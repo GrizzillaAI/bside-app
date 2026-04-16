@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { usePlayer } from '../lib/player';
 import type { PlayerTrack } from '../lib/player';
-import { searchAll, saveTrackToLibrary, PHASE_1_SOURCES } from '../lib/api';
+import { searchAll, saveTrackToLibrary, resolveSoundCloudStream, PHASE_1_SOURCES } from '../lib/api';
 import type { UnifiedResult, SourcePlatform, MultiSourceStatus } from '../lib/api';
 import {
   beginSpotifyOAuth, getMySpotifyConnection, type SpotifyConnection,
@@ -73,23 +73,37 @@ function ResultCard({
         return;
       }
 
-      // YouTube: pass video ID directly — the YouTube IFrame embed handles playback
-      // SoundCloud: use the stream_url from the search result
-      const audioUrl = result.source_platform === 'youtube'
-        ? ''  // YouTube doesn't use audio_url — the iframe plays the video
-        : (result.stream_url ?? '');
-
-      if (!audioUrl && result.source_platform !== 'youtube') {
-        setError('No playback available for this track');
-        setLoading(false);
-        return;
+      // SoundCloud: resolve CDN stream URL on demand (API URLs have CORS issues)
+      if (result.source_platform === 'soundcloud') {
+        try {
+          const cdnUrl = await resolveSoundCloudStream(result.source_id);
+          const track: PlayerTrack = {
+            title: result.title,
+            artist: result.artist,
+            thumbnail_url: result.thumbnail_url,
+            audio_url: cdnUrl,
+            duration_seconds: result.duration_seconds,
+            source_platform: 'soundcloud',
+            source_id: result.source_id,
+            source_url: result.external_url,
+          };
+          play(track);
+          setLoading(false);
+          return;
+        } catch (e) {
+          console.error('SoundCloud resolve failed:', e);
+          setError('Could not load SoundCloud stream');
+          setLoading(false);
+          return;
+        }
       }
 
+      // YouTube: pass video ID directly — the YouTube IFrame embed handles playback
       const track: PlayerTrack = {
         title: result.title,
         artist: result.artist,
         thumbnail_url: result.thumbnail_url,
-        audio_url: audioUrl,
+        audio_url: '',  // YouTube doesn't use audio_url — the iframe plays the video
         duration_seconds: result.duration_seconds,
         source_platform: result.source_platform,
         source_id: result.source_id,

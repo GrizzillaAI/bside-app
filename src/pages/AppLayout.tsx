@@ -3,8 +3,6 @@ import { Home, Search, Library, ListMusic, Settings, Music, Play, Pause, SkipBac
 import { useAuth } from '../lib/auth';
 import { usePlayer, formatTime } from '../lib/player';
 import { LogoMark, Wordmark } from '../components/Logo';
-import PlaybackModeToggle from '../components/PlaybackModeToggle';
-import SkippedTracksBanner from '../components/SkippedTracksBanner';
 import YouTubeEmbed from '../components/YouTubeEmbed';
 
 const navItems = [
@@ -18,7 +16,7 @@ export default function AppLayout() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const {
-    currentTrack, isPlaying, currentTime, duration, volume,
+    currentTrack, isPlaying, currentTime, duration, volume, playbackError,
     togglePlayPause, seek, setVolume, skipNext, skipPrev,
     youtubeVideoId, onYouTubeStateChange, onYouTubeTimeUpdate, onYouTubeReady, youtubeRef,
   } = usePlayer();
@@ -87,12 +85,16 @@ export default function AppLayout() {
 
       {/* Main area */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Skipped-tracks banner (auto-hides when empty) */}
-        <SkippedTracksBanner />
-
         <main className="flex-1 overflow-y-auto p-8">
           <Outlet />
         </main>
+
+        {/* Playback error banner */}
+        {playbackError && (
+          <div className="bg-red-500/15 border-t border-red-500/30 px-4 py-2 text-sm text-red-300 text-center">
+            {playbackError}
+          </div>
+        )}
 
         {/* Player bar */}
         <div className="h-20 bg-void border-t border-slate px-6 flex items-center gap-6 shrink-0">
@@ -161,9 +163,8 @@ export default function AppLayout() {
             </div>
           </div>
 
-          {/* Mode + Volume */}
+          {/* Volume */}
           <div className="flex items-center gap-3 shrink-0">
-            <PlaybackModeToggle />
             <div className="flex items-center gap-2 w-36">
               <button
                 onClick={() => setVolume(volume > 0 ? 0 : 0.75)}
