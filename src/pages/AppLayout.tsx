@@ -5,6 +5,7 @@ import { usePlayer, formatTime } from '../lib/player';
 import { LogoMark, Wordmark } from '../components/Logo';
 import YouTubeEmbed from '../components/YouTubeEmbed';
 import SoundCloudEmbed from '../components/SoundCloudEmbed';
+import TrackReactions from '../components/TrackReactions';
 
 const navItems = [
   { to: '/app', icon: Home, label: 'Home', end: true },
@@ -131,7 +132,7 @@ export default function AppLayout() {
                 )}
               </div>
             )}
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="text-sm font-medium truncate text-pearl">
                 {currentTrack?.title ?? 'No track playing'}
               </p>
@@ -139,6 +140,7 @@ export default function AppLayout() {
                 {currentTrack?.artist ?? 'Search or paste a link to start'}
               </p>
             </div>
+            <TrackReactions track={currentTrack} />
           </div>
 
           {/* Controls */}

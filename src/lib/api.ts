@@ -220,6 +220,49 @@ export async function extractAudio(urlOrVideoId: string): Promise<ExtractionResu
 }
 
 // ---------------------------------------------------------------------------
+// Track helpers
+// ---------------------------------------------------------------------------
+
+/** Ensure a track exists in the DB (upsert by user+platform+source_id), return its row id */
+export async function ensureTrackInDb(track: {
+  title: string;
+  artist: string;
+  source_platform: string;
+  source_url: string;
+  source_id: string;
+  thumbnail_url: string;
+  duration_seconds: number | null;
+}): Promise<string> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not signed in');
+
+  const dur =
+    typeof track.duration_seconds === 'number' &&
+    Number.isFinite(track.duration_seconds) &&
+    track.duration_seconds > 0
+      ? Math.round(track.duration_seconds)
+      : null;
+
+  const { data, error } = await supabase
+    .from('tracks')
+    .upsert({
+      user_id: user.id,
+      title: track.title,
+      artist: track.artist,
+      source_platform: track.source_platform,
+      source_url: track.source_url,
+      source_id: track.source_id,
+      thumbnail_url: track.thumbnail_url,
+      duration_seconds: dur,
+    }, { onConflict: 'user_id,source_platform,source_id' })
+    .select('id')
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data.id;
+}
+
+// ---------------------------------------------------------------------------
 // Track Engagement — Reactions
 // ---------------------------------------------------------------------------
 export async function getTrackReactions(trackId: string) {
