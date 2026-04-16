@@ -47,6 +47,7 @@ interface PlayerState {
   skipNext: () => void;
   skipPrev: () => void;
   addToQueue: (track: PlayerTrack) => void;
+  replaceQueue: (tracks: PlayerTrack[]) => void;
   // YouTube embed callbacks — called by the YouTubeEmbed component
   onYouTubeStateChange: (state: 'playing' | 'paused' | 'ended' | 'buffering') => void;
   onYouTubeTimeUpdate: (currentTime: number, duration: number) => void;
@@ -322,6 +323,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setQueue((q) => [...q, track]);
   }, []);
 
+  const replaceQueue = useCallback((tracks: PlayerTrack[]) => {
+    setQueue(tracks);
+  }, []);
+
   return (
     <PlayerContext.Provider
       value={{
@@ -343,6 +348,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         skipNext,
         skipPrev,
         addToQueue,
+        replaceQueue,
         onYouTubeStateChange,
         onYouTubeTimeUpdate,
         onYouTubeReady,

@@ -25,7 +25,7 @@ const PLATFORM_LABELS: Record<string, string> = {
 };
 
 export default function Playlists() {
-  const { play, currentTrack, isPlaying, togglePlayPause } = usePlayer();
+  const { play, currentTrack, isPlaying, togglePlayPause, replaceQueue } = usePlayer();
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -108,19 +108,13 @@ export default function Playlists() {
     }
   };
 
-  const handlePlayTrack = (t: PlaylistTrackItem['track']) => {
-    const isThis = currentTrack?.source_id === t.source_id;
-    if (isThis) {
-      togglePlayPause();
-      return;
-    }
-
+  /** Convert a playlist track DB row to a PlayerTrack */
+  const toPlayerTrack = (t: PlaylistTrackItem['track']): import('../lib/player').PlayerTrack => {
     let audioUrl = '';
     if (t.source_platform === 'spotify' && t.source_id) {
       audioUrl = `spotify:track:${t.source_id}`;
     }
-
-    play({
+    return {
       id: t.id,
       title: t.title,
       artist: t.artist || 'Unknown Artist',
@@ -130,7 +124,20 @@ export default function Playlists() {
       source_platform: t.source_platform,
       source_id: t.source_id || '',
       source_url: t.source_url,
-    });
+    };
+  };
+
+  const handlePlayTrack = (t: PlaylistTrackItem['track'], index: number) => {
+    const isThis = currentTrack?.source_id === t.source_id;
+    if (isThis) {
+      togglePlayPause();
+      return;
+    }
+
+    // Play the clicked track and queue everything after it
+    play(toPlayerTrack(t));
+    const remaining = playlistTracks.slice(index + 1).map((pt) => toPlayerTrack(pt.track));
+    replaceQueue(remaining);
   };
 
   // ── Detail view ──────────────────────────────────────────────────────
@@ -179,7 +186,7 @@ export default function Playlists() {
                 >
                   <span className="text-xs text-[#5E5E7A] w-6 text-right shrink-0">{idx + 1}</span>
                   <button
-                    onClick={() => handlePlayTrack(t)}
+                    onClick={() => handlePlayTrack(t, idx)}
                     className={`w-10 h-10 rounded-full flex items-center justify-center transition shrink-0 ${
                       isThis ? 'bg-[#FF2D87]' : 'bg-[#1A1A28] group-hover:bg-[#FF2D87]'
                     }`}
