@@ -197,34 +197,38 @@ const SoundCloudEmbed = forwardRef<SoundCloudEmbedRef, SoundCloudEmbedProps>(
 
     return (
       <div
-        className={`
-          relative rounded-lg overflow-hidden bg-[#f50] transition-all duration-300 ease-in-out cursor-pointer shrink-0
-          ${expanded
-            ? 'w-80 h-[120px] z-50 shadow-2xl shadow-black/60'
-            : 'w-20 h-[60px]'
-          }
-        `}
+        className="relative w-20 h-[60px] shrink-0"
         onMouseEnter={() => setExpanded(true)}
         onMouseLeave={() => setExpanded(false)}
         onClick={() => setExpanded((e) => !e)}
       >
-        <iframe
-          ref={iframeRef}
-          src={iframeSrc}
-          width="100%"
-          height="100%"
-          allow="autoplay"
-          style={{ border: 'none' }}
-          title="SoundCloud Player"
-        />
-        {/* Subtle label when collapsed */}
-        {!expanded && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="absolute bottom-0.5 right-0.5 bg-black/70 rounded px-1 py-0.5">
-              <span className="text-[8px] text-white/60 font-mono">SC</span>
+        <div
+          className={`
+            absolute rounded-lg overflow-hidden bg-[#f50] transition-all duration-300 ease-in-out cursor-pointer
+            ${expanded
+              ? 'w-80 h-[120px] z-50 shadow-2xl shadow-black/60 bottom-0 left-0'
+              : 'w-20 h-[60px] bottom-0 left-0'
+            }
+          `}
+        >
+          <iframe
+            ref={iframeRef}
+            src={iframeSrc}
+            width="100%"
+            height="100%"
+            allow="autoplay"
+            style={{ border: 'none' }}
+            title="SoundCloud Player"
+          />
+          {/* Subtle label when collapsed */}
+          {!expanded && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="absolute bottom-0.5 right-0.5 bg-black/70 rounded px-1 py-0.5">
+                <span className="text-[8px] text-white/60 font-mono">SC</span>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     );
   },

@@ -96,8 +96,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (state === 'playing') setIsPlaying(true);
     if (state === 'paused') setIsPlaying(false);
     if (state === 'ended') {
-      setIsPlaying(false);
-      // Use setTimeout to avoid state-update-during-render
+      // Don't flicker to paused if there's a next track — advance immediately
       setTimeout(() => advanceQueue(), 0);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -119,7 +118,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (state === 'playing') setIsPlaying(true);
     if (state === 'paused') setIsPlaying(false);
     if (state === 'ended') {
-      setIsPlaying(false);
       setTimeout(() => advanceQueue(), 0);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -136,6 +134,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Advance to the next track in the queue.
+  // Keeps isPlaying=true during transitions so the UI doesn't flicker.
   const advanceQueue = useCallback(() => {
     setQueue((q) => {
       if (q.length === 0) {
@@ -143,7 +142,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         return q;
       }
       const [next, ...rest] = q;
-      setTimeout(() => playTrack(next), 0);
+      // Play next track immediately — no pause gap
+      playTrack(next);
       return rest;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -161,7 +161,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     });
     audio.addEventListener('ended', () => {
       if (backendRef.current === 'html') {
-        setIsPlaying(false);
         advanceQueue();
       }
     });
