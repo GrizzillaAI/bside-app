@@ -356,3 +356,169 @@ export async function saveTrackToLibrary(track: {
   if (libErr) throw new Error(libErr.message);
   return trackRow;
 }
+
+// ---------------------------------------------------------------------------
+// Playlists
+// ---------------------------------------------------------------------------
+export interface Playlist {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  is_public: boolean;
+  cover_url: string | null;
+  track_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PlaylistTrackItem {
+  id: string;
+  playlist_id: string;
+  track_id: string;
+  position: number;
+  added_at: string;
+  track: {
+    id: string;
+    title: string;
+    artist: string | null;
+    source_platform: string;
+    source_url: string;
+    source_id: string | null;
+    thumbnail_url: string | null;
+    duration_seconds: number | null;
+  };
+}
+
+/** Fetch all playlists for the current user */
+export async function getMyPlaylists(): Promise<Playlist[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data, error } = await supabase
+    .from('playlists')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('updated_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Playlist[];
+}
+
+/** Create a new playlist */
+export async function createPlaylist(name: string, description?: string): Promise<Playlist> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not signed in');
+  const { data, error } = await supabase
+    .from('playlists')
+    .insert({ user_id: user.id, name, description: description || null })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data as Playlist;
+}
+
+/** Delete a playlist */
+export async function deletePlaylist(playlistId: string): Promise<void> {
+  // Delete playlist tracks first, then the playlist
+  await supabase.from('playlist_tracks').delete().eq('playlist_id', playlistId);
+  const { error } = await supabase.from('playlists').delete().eq('id', playlistId);
+  if (error) throw new Error(error.message);
+}
+
+/** Get tracks in a playlist */
+export async function getPlaylistTracks(playlistId: string): Promise<PlaylistTrackItem[]> {
+  const { data, error } = await supabase
+    .from('playlist_tracks')
+    .select('*, track:tracks(id, title, artist, source_platform, source_url, source_id, thumbnail_url, duration_seconds)')
+    .eq('playlist_id', playlistId)
+    .order('position', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as PlaylistTrackItem[];
+}
+
+/** Add a track to a playlist. Saves the track to the tracks table first if needed. */
+export async function addTrackToPlaylist(
+  playlistId: string,
+  track: {
+    title: string;
+    artist: string;
+    source_platform: string;
+    source_url: string;
+    source_id: string;
+    thumbnail_url: string;
+    duration_seconds: number | null;
+  },
+): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not signed in');
+
+  // Normalize duration
+  const dur =
+    typeof track.duration_seconds === 'number' &&
+    Number.isFinite(track.duration_seconds) &&
+    track.duration_seconds > 0
+      ? Math.round(track.duration_seconds)
+      : null;
+
+  // Upsert the track
+  const { data: trackRow, error: trackErr } = await supabase
+    .from('tracks')
+    .upsert({
+      user_id: user.id,
+      title: track.title,
+      artist: track.artist,
+      source_platform: track.source_platform,
+      source_url: track.source_url,
+      source_id: track.source_id,
+      thumbnail_url: track.thumbnail_url,
+      duration_seconds: dur,
+    }, { onConflict: 'user_id,source_platform,source_id' })
+    .select()
+    .single();
+  if (trackErr) throw new Error(trackErr.message);
+
+  // Get the next position
+  const { data: existing } = await supabase
+    .from('playlist_tracks')
+    .select('position')
+    .eq('playlist_id', playlistId)
+    .order('position', { ascending: false })
+    .limit(1);
+  const nextPos = (existing?.[0]?.position ?? -1) + 1;
+
+  // Check if track is already in this playlist
+  const { data: dup } = await supabase
+    .from('playlist_tracks')
+    .select('id')
+    .eq('playlist_id', playlistId)
+    .eq('track_id', trackRow.id)
+    .maybeSingle();
+  if (dup) return; // Already in playlist
+
+  // Insert
+  const { error: ptErr } = await supabase
+    .from('playlist_tracks')
+    .insert({ playlist_id: playlistId, track_id: trackRow.id, position: nextPos });
+  if (ptErr) throw new Error(ptErr.message);
+
+  // Update track_count
+  await supabase
+    .from('playlists')
+    .update({ track_count: nextPos + 1, updated_at: new Date().toISOString() })
+    .eq('id', playlistId);
+}
+
+/** Remove a track from a playlist */
+export async function removeTrackFromPlaylist(playlistTrackId: string, playlistId: string): Promise<void> {
+  const { error } = await supabase.from('playlist_tracks').delete().eq('id', playlistTrackId);
+  if (error) throw new Error(error.message);
+
+  // Recount
+  const { count } = await supabase
+    .from('playlist_tracks')
+    .select('id', { count: 'exact', head: true })
+    .eq('playlist_id', playlistId);
+  await supabase
+    .from('playlists')
+    .update({ track_count: count ?? 0, updated_at: new Date().toISOString() })
+    .eq('id', playlistId);
+}

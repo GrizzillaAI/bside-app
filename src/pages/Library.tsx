@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Play, Pause, Clock, Music, Link as LinkIcon, Loader2, Trash2, Plus } from 'lucide-react';
+import { Play, Pause, Clock, Music, Link as LinkIcon, Loader2, Trash2, Plus, ListMusic } from 'lucide-react';
 import { usePlayer, formatTime } from '../lib/player';
 import type { PlayerTrack } from '../lib/player';
 import { saveTrackToLibrary } from '../lib/api';
 import { supabase } from '../lib/supabase';
+import AddToPlaylistModal from '../components/AddToPlaylistModal';
+import type { TrackForPlaylist } from '../components/AddToPlaylistModal';
 
 /** Detect platform from URL */
 function detectPlatform(url: string): string | null {
@@ -16,12 +18,15 @@ function detectPlatform(url: string): string | null {
 }
 
 const PLATFORM_LABELS: Record<string, string> = {
-  youtube: 'YT',
-  tiktok: 'TT',
-  instagram: 'IG',
+  youtube: 'YouTube',
+  spotify: 'Spotify',
+  soundcloud: 'SoundCloud',
+  applemusic: 'Apple Music',
+  tiktok: 'TikTok',
+  instagram: 'Instagram',
   twitter: 'X',
-  podcast: 'POD',
-  upload: 'UP',
+  podcast: 'Podcast',
+  upload: 'Upload',
 };
 
 interface LibraryItem {
@@ -48,6 +53,7 @@ export default function Library() {
   const [detectedPlatform, setDetectedPlatform] = useState<string | null>(null);
   const [tracks, setTracks] = useState<LibraryItem[]>([]);
   const [loadingTracks, setLoadingTracks] = useState(true);
+  const [playlistTrack, setPlaylistTrack] = useState<TrackForPlaylist | null>(null);
 
   // Load library tracks
   useEffect(() => {
@@ -262,7 +268,7 @@ export default function Library() {
                   <p className={`text-sm font-medium truncate ${isThis ? 'text-[#FF2D87]' : ''}`}>{t.title}</p>
                   <p className="text-xs text-[#5E5E7A] truncate">{t.artist || 'Unknown Artist'}</p>
                 </div>
-                <span className="text-xs font-medium text-[#FF2D87] bg-[#FF2D87]/10 px-2 py-1 rounded shrink-0 uppercase">
+                <span className="text-xs font-medium text-[#FF2D87] bg-[#FF2D87]/10 px-2 py-1 rounded shrink-0">
                   {PLATFORM_LABELS[t.source_platform] || t.source_platform}
                 </span>
                 {t.duration_seconds && (
@@ -271,6 +277,21 @@ export default function Library() {
                   </span>
                 )}
                 <span className="text-xs text-[#5E5E7A] shrink-0 w-24 text-right">{formatAdded(item.added_at)}</span>
+                <button
+                  onClick={() => setPlaylistTrack({
+                    title: t.title,
+                    artist: t.artist || 'Unknown Artist',
+                    source_platform: t.source_platform,
+                    source_url: t.source_url,
+                    source_id: t.source_id || '',
+                    thumbnail_url: t.thumbnail_url || '',
+                    duration_seconds: t.duration_seconds,
+                  })}
+                  className="text-[#5E5E7A] hover:text-[#FF2D87] transition opacity-0 group-hover:opacity-100"
+                  title="Add to playlist"
+                >
+                  <ListMusic className="w-4 h-4" />
+                </button>
                 <button
                   onClick={() => handleRemove(item.id)}
                   className="text-[#5E5E7A] hover:text-red-400 transition opacity-0 group-hover:opacity-100"
@@ -282,6 +303,13 @@ export default function Library() {
             );
           })}
         </div>
+      )}
+
+      {playlistTrack && (
+        <AddToPlaylistModal
+          track={playlistTrack}
+          onClose={() => setPlaylistTrack(null)}
+        />
       )}
     </div>
   );

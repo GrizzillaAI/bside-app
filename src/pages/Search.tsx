@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   Search as SearchIcon, Play, Pause, Plus, Loader2,
-  ExternalLink, Music, Youtube, Lock, Crown,
+  ExternalLink, Music, Youtube, Lock, Crown, ListMusic,
 } from 'lucide-react';
 import { usePlayer } from '../lib/player';
 import type { PlayerTrack } from '../lib/player';
@@ -10,6 +10,8 @@ import type { UnifiedResult, SourcePlatform, MultiSourceStatus } from '../lib/ap
 import {
   beginSpotifyOAuth, getMySpotifyConnection, type SpotifyConnection,
 } from '../lib/spotify';
+import AddToPlaylistModal from '../components/AddToPlaylistModal';
+import type { TrackForPlaylist } from '../components/AddToPlaylistModal';
 
 // ── Platform metadata ───────────────────────────────────────────────────
 const PLATFORM_META: Record<SourcePlatform, { label: string; badge: string; accent: string }> = {
@@ -32,6 +34,7 @@ function ResultCard({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPlaylistModal, setShowPlaylistModal] = useState(false);
 
   const isThisPlaying = currentTrack?.source_id === result.source_id
     && currentTrack?.source_platform === result.source_platform;
@@ -210,6 +213,14 @@ function ResultCard({
           </a>
 
           <button
+            onClick={() => setShowPlaylistModal(true)}
+            className="p-2 rounded-lg text-ash hover:text-pearl hover:bg-graphite transition"
+            title="Add to playlist"
+          >
+            <ListMusic className="w-4 h-4" />
+          </button>
+
+          <button
             onClick={handleSave}
             disabled={saving || saved}
             className={`px-3 py-2 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shrink-0 ${
@@ -228,6 +239,21 @@ function ResultCard({
           </button>
         </div>
       </div>
+
+      {showPlaylistModal && (
+        <AddToPlaylistModal
+          track={{
+            title: result.title,
+            artist: result.artist,
+            source_platform: result.source_platform,
+            source_url: result.external_url,
+            source_id: result.source_id,
+            thumbnail_url: result.thumbnail_url,
+            duration_seconds: result.duration_seconds,
+          }}
+          onClose={() => setShowPlaylistModal(false)}
+        />
+      )}
     </div>
   );
 }
