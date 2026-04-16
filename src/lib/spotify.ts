@@ -269,14 +269,15 @@ export async function ensureSpotifyPlayer(): Promise<string | null> {
 
 /**
  * Plays a Spotify track by URI (spotify:track:XXXX) via the Web Playback SDK.
- * Returns true on success, false if the user is not connected or not Premium.
+ * Returns { ok: true } on success, or { ok: false, reason: string } with a
+ * detailed diagnostic message on failure.
  */
-export async function playSpotifyTrack(trackUri: string): Promise<boolean> {
+export async function playSpotifyTrack(trackUri: string): Promise<{ ok: true } | { ok: false; reason: string }> {
   const token = await getSpotifyAccessToken();
-  if (!token) return false;
+  if (!token) return { ok: false, reason: 'No Spotify token — not connected or token refresh failed.' };
 
   const id = await ensureSpotifyPlayer();
-  if (!id) return false;
+  if (!id) return { ok: false, reason: 'Spotify Web Player failed to initialize (SDK did not connect).' };
 
   const resp = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${id}`, {
     method: 'PUT',
@@ -289,10 +290,11 @@ export async function playSpotifyTrack(trackUri: string): Promise<boolean> {
   if (!resp.ok) {
     const err = await resp.text().catch(() => '');
     console.warn('Spotify play failed:', resp.status, err);
-    // 403 typically means non-Premium account
-    return false;
+    if (resp.status === 403) return { ok: false, reason: `Spotify 403 Forbidden — Premium required or app not authorized. ${err}` };
+    if (resp.status === 404) return { ok: false, reason: `Spotify 404 — device not found. Player may need re-init. ${err}` };
+    return { ok: false, reason: `Spotify API error ${resp.status}: ${err}` };
   }
-  return true;
+  return { ok: true };
 }
 
 export async function pauseSpotify(): Promise<void> {

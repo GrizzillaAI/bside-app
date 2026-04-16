@@ -220,10 +220,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       // Clear other embeds when switching away
       setYoutubeVideoId(null);
       setSoundcloudTrackUrl(null);
-      const ok = await playSpotifyTrack(track.audio_url);
-      if (!ok) {
-        console.warn('Spotify playback failed — user may not be Premium or not connected');
-        setPlaybackError('Spotify playback failed. Make sure you have a Premium account and are connected in Settings.');
+      const result = await playSpotifyTrack(track.audio_url);
+      if (!result.ok) {
+        console.warn('Spotify playback failed:', result.reason);
+        setPlaybackError(`Spotify: ${result.reason}`);
         setIsPlaying(false);
         return;
       }
