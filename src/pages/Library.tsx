@@ -145,16 +145,21 @@ export default function Library() {
       return;
     }
 
-    // YouTube: play via iframe (source_id is the video ID)
-    // SoundCloud/other: audio_url would need to come from search results
-    // For library items we just pass what we have — YouTube plays via iframe,
-    // others play via the HTML audio backend if they have a stream URL.
+    // Build the correct audio_url per platform:
+    // - Spotify: needs spotify:track:XXX URI for Web Playback SDK
+    // - YouTube: empty (iframe handles playback via source_id)
+    // - SoundCloud: empty (Widget API iframe handles playback via source_url)
+    let audioUrl = '';
+    if (t.source_platform === 'spotify' && t.source_id) {
+      audioUrl = `spotify:track:${t.source_id}`;
+    }
+
     play({
       id: t.id,
       title: t.title,
       artist: t.artist || 'Unknown Artist',
       thumbnail_url: t.thumbnail_url || '',
-      audio_url: '',  // YouTube uses iframe; other platforms use stream_url from search
+      audio_url: audioUrl,
       duration_seconds: t.duration_seconds || 0,
       source_platform: t.source_platform,
       source_id: t.source_id || '',
