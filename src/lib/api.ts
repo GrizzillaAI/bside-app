@@ -218,6 +218,19 @@ export async function resolveTikTokUrl(url: string): Promise<TikTokResolveResult
 }
 
 // ---------------------------------------------------------------------------
+// B3 Event Backbone — fire-and-forget event logging
+// ---------------------------------------------------------------------------
+/**
+ * Logs an app-code event to the B3 backbone via edge function.
+ * Fire-and-forget: errors are swallowed so this never blocks the UI.
+ */
+export function logB3Event(eventType: string, properties: Record<string, unknown> = {}) {
+  supabase.functions
+    .invoke('b3-event', { body: { event_type: eventType, properties } })
+    .catch((err) => console.warn('B3 event log failed (non-critical):', err));
+}
+
+// ---------------------------------------------------------------------------
 // Audio Extraction
 // ---------------------------------------------------------------------------
 export interface ExtractionResult {
@@ -478,6 +491,10 @@ export async function createPlaylist(name: string, description?: string): Promis
     .select()
     .single();
   if (error) throw new Error(error.message);
+
+  // B3: log playlist creation (fire-and-forget)
+  logB3Event('playlist.created', { playlist_id: data.id, name });
+
   return data as Playlist;
 }
 

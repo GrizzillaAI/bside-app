@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, CreditCard, LogOut, Crown, Check, Bell, Volume2, Music2, Link2, Link2Off, Loader2 } from 'lucide-react';
+import { User, CreditCard, LogOut, Crown, Check, Bell, Volume2, Music2, Link2, Link2Off, Loader2, Youtube } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import {
   beginSpotifyOAuth, getMySpotifyConnection, disconnectSpotify, SpotifyConnection,
 } from '../lib/spotify';
+import {
+  beginYouTubeOAuth, getMyYouTubeConnection, disconnectYouTube, type YouTubeConnection,
+} from '../lib/youtube';
 
 export default function Settings() {
   const { user, signOut } = useAuth();
@@ -15,6 +18,10 @@ export default function Settings() {
   const [loadingSpotify, setLoadingSpotify] = useState(true);
   const [disconnecting, setDisconnecting] = useState(false);
 
+  const [youtubeConn, setYoutubeConn] = useState<YouTubeConnection | null>(null);
+  const [loadingYouTube, setLoadingYouTube] = useState(true);
+  const [disconnectingYT, setDisconnectingYT] = useState(false);
+
   useEffect(() => {
     (async () => {
       try {
@@ -22,6 +29,14 @@ export default function Settings() {
         setSpotifyConn(conn);
       } finally {
         setLoadingSpotify(false);
+      }
+    })();
+    (async () => {
+      try {
+        const conn = await getMyYouTubeConnection();
+        setYoutubeConn(conn);
+      } finally {
+        setLoadingYouTube(false);
       }
     })();
   }, []);
@@ -48,6 +63,26 @@ export default function Settings() {
       setSpotifyConn(null);
     } finally {
       setDisconnecting(false);
+    }
+  };
+
+  const handleConnectYouTube = () => {
+    try {
+      beginYouTubeOAuth('/app/settings');
+    } catch (err) {
+      console.error(err);
+      alert('Unable to start YouTube connection. Please try again.');
+    }
+  };
+
+  const handleDisconnectYouTube = async () => {
+    if (!confirm('Disconnect your YouTube account? Mixd will no longer be able to import your YouTube playlists.')) return;
+    setDisconnectingYT(true);
+    try {
+      await disconnectYouTube();
+      setYoutubeConn(null);
+    } finally {
+      setDisconnectingYT(false);
     }
   };
 
@@ -130,6 +165,53 @@ export default function Settings() {
                   >
                     <Link2 className="w-3.5 h-3.5" />
                     Connect Spotify
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* YouTube */}
+        <div className="bg-[#050509] border border-[#1A1A28] rounded-lg p-4 mt-3">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-lg bg-red-600 flex items-center justify-center flex-shrink-0">
+              <Youtube className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold">YouTube</p>
+
+              {loadingYouTube ? (
+                <p className="text-sm text-[#5E5E7A] mt-1 flex items-center gap-2">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Checking connection...
+                </p>
+              ) : youtubeConn ? (
+                <p className="text-sm text-[#A0A0B8] mt-1">
+                  Connected as <span className="text-pearl font-medium">{youtubeConn.display_name || youtubeConn.email || youtubeConn.youtube_channel_id}</span>
+                </p>
+              ) : (
+                <p className="text-sm text-[#A0A0B8] mt-1">
+                  Connect your YouTube account to import playlists and play videos in Mixd.
+                </p>
+              )}
+
+              <div className="mt-3">
+                {youtubeConn ? (
+                  <button
+                    onClick={handleDisconnectYouTube}
+                    disabled={disconnectingYT}
+                    className="inline-flex items-center gap-2 bg-[#1A1A28] hover:bg-[#2A2A38] disabled:opacity-50 px-3 py-1.5 rounded-lg text-xs font-medium transition"
+                  >
+                    {disconnectingYT ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Link2Off className="w-3.5 h-3.5" />}
+                    Disconnect
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleConnectYouTube}
+                    className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition"
+                  >
+                    <Link2 className="w-3.5 h-3.5" />
+                    Connect YouTube
                   </button>
                 )}
               </div>

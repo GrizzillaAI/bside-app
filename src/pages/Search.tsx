@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { usePlayer } from '../lib/player';
 import type { PlayerTrack } from '../lib/player';
-import { searchAll, saveTrackToLibrary, PHASE_1_SOURCES } from '../lib/api';
+import { searchAll, saveTrackToLibrary, logB3Event, PHASE_1_SOURCES } from '../lib/api';
 import type { UnifiedResult, SourcePlatform, MultiSourceStatus } from '../lib/api';
 import {
   beginSpotifyOAuth, getMySpotifyConnection, type SpotifyConnection,
@@ -293,6 +293,13 @@ export default function Search() {
       setResults(data.results);
       setStatus(data.status);
       setSourceErrors(data.errors);
+
+      // B3: log search event (fire-and-forget)
+      logB3Event('search.performed', {
+        query: query.trim(),
+        result_count: data.results.length,
+        sources: VISIBLE_SOURCES,
+      });
     } catch (err) {
       console.error('Search failed:', err);
       setError((err as Error).message);
