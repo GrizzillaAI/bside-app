@@ -72,3 +72,17 @@ input[type="range"]::-moz-range-thumb {
 
 /* Selection color */
 ::selection { background: #FF2D87; color: #FAFAFC; }
+
+/* Mobile menu slide-in */
+@keyframes slideIn {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+.animate-slide-in {
+  animation: slideIn 0.2s ease-out;
+}
+
+/* Safe area for iPhone notch/home bar */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
