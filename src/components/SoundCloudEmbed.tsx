@@ -1,11 +1,8 @@
 // SoundCloudEmbed — Persistent SoundCloud Widget player for the Mixd player bar.
 //
 // Uses the official SoundCloud Widget API (iframe + JS API) for playback.
-// The component loads the Widget API script once and communicates with the
-// iframe via postMessage. Exposes play/pause/seek via forwardRef so the
-// global player context can control it.
-//
-// Requires a SoundCloud track permalink URL (e.g. https://soundcloud.com/user/track).
+// On mobile (iOS Safari), programmatic play() calls are blocked by autoplay
+// policy, so the widget auto-expands to expose SoundCloud's native play button.
 
 import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 
@@ -60,6 +57,11 @@ function loadSoundCloudAPI(): Promise<void> {
   return apiLoadPromise;
 }
 
+/** Simple mobile check — touch device + small screen */
+function isMobileDevice(): boolean {
+  return typeof window !== 'undefined' && window.innerWidth < 768;
+}
+
 // ── Component ───────────────────────────────────────────────────────────
 export interface SoundCloudEmbedProps {
   trackUrl: string | null;          // SoundCloud permalink URL
@@ -83,12 +85,14 @@ const SoundCloudEmbed = forwardRef<SoundCloudEmbedRef, SoundCloudEmbedProps>(
     const [apiReady, setApiReady] = useState(false);
     const [widgetReady, setWidgetReady] = useState(false);
     const [expanded, setExpanded] = useState(false);
+    const [hasPlayedOnce, setHasPlayedOnce] = useState(false);
     const currentUrlRef = useRef<string | null>(null);
+    const mobile = isMobileDevice();
 
     // Expose imperative methods to parent
     useImperativeHandle(ref, () => ({
       seek(seconds: number) {
-        widgetRef.current?.seekTo(seconds * 1000); // Widget API uses milliseconds
+        widgetRef.current?.seekTo(seconds * 1000);
       },
       play() {
         widgetRef.current?.play();
@@ -108,7 +112,7 @@ const SoundCloudEmbed = forwardRef<SoundCloudEmbedRef, SoundCloudEmbedProps>(
     // Initialize the widget once API is loaded and iframe exists
     useEffect(() => {
       if (!apiReady || !iframeRef.current || !window.SC?.Widget) return;
-      if (widgetRef.current) return; // Already initialized
+      if (widgetRef.current) return;
 
       const widget = window.SC.Widget(iframeRef.current);
       widgetRef.current = widget;
@@ -123,6 +127,9 @@ const SoundCloudEmbed = forwardRef<SoundCloudEmbedRef, SoundCloudEmbedProps>(
 
       widget.bind(Events.PLAY, () => {
         onStateChange('playing');
+        // Once SC starts playing, collapse the widget on mobile
+        if (!hasPlayedOnce) setHasPlayedOnce(true);
+        if (mobile) setExpanded(false);
       });
 
       widget.bind(Events.PAUSE, () => {
@@ -134,7 +141,6 @@ const SoundCloudEmbed = forwardRef<SoundCloudEmbedRef, SoundCloudEmbedProps>(
       });
 
       widget.bind(Events.PLAY_PROGRESS, (data: any) => {
-        // data.currentPosition is in ms, data.relativePosition is 0-1
         const currentMs = data?.currentPosition ?? 0;
         widget.getDuration((durMs: number) => {
           onTimeUpdate(currentMs / 1000, durMs / 1000);
@@ -151,8 +157,12 @@ const SoundCloudEmbed = forwardRef<SoundCloudEmbedRef, SoundCloudEmbedProps>(
     // Load new track when trackUrl changes
     useEffect(() => {
       if (!widgetRef.current || !trackUrl) return;
-      if (currentUrlRef.current === trackUrl) return; // Same track, no reload needed
+      if (currentUrlRef.current === trackUrl) return;
       currentUrlRef.current = trackUrl;
+      setHasPlayedOnce(false);
+
+      // On mobile, auto-expand so user can tap the widget's native play button
+      if (mobile) setExpanded(true);
 
       widgetRef.current.load(trackUrl, {
         auto_play: true,
@@ -166,13 +176,12 @@ const SoundCloudEmbed = forwardRef<SoundCloudEmbedRef, SoundCloudEmbedProps>(
         sharing: false,
         download: false,
         callback: () => {
-          // After load completes, set volume
           widgetRef.current?.setVolume(Math.round(volume * 100));
         },
       });
-    }, [trackUrl, volume]);
+    }, [trackUrl, volume, mobile]);
 
-    // Sync play/pause from parent state
+    // Sync play/pause from parent state (works on desktop, best-effort on mobile)
     useEffect(() => {
       if (!widgetRef.current || !widgetReady) return;
       widgetRef.current.isPaused((paused: boolean) => {
@@ -189,30 +198,35 @@ const SoundCloudEmbed = forwardRef<SoundCloudEmbedRef, SoundCloudEmbedProps>(
       widgetRef.current?.setVolume(Math.round(volume * 100));
     }, [volume]);
 
-    // If there's no track URL, hide the embed
     if (!trackUrl) return null;
 
-    // Build the initial iframe src with the track URL
+    // Use key={trackUrl} to force iframe reload on track change — gives
+    // auto_play the best chance of working since it's a fresh navigation
     const iframeSrc = `https://w.soundcloud.com/player/?url=${encodeURIComponent(trackUrl)}&auto_play=true&show_artwork=true&show_comments=false&show_playcount=false&show_user=false&hide_related=true&visual=false&buying=false&sharing=false&download=false`;
 
     return (
       <div
-        className="relative w-20 h-[60px] shrink-0"
-        onMouseEnter={() => setExpanded(true)}
-        onMouseLeave={() => setExpanded(false)}
-        onClick={() => setExpanded((e) => !e)}
+        className={`relative shrink-0 ${mobile ? 'w-10 h-10' : 'w-20 h-[60px]'}`}
+        onMouseEnter={() => !mobile && setExpanded(true)}
+        onMouseLeave={() => !mobile && setExpanded(false)}
+        onClick={() => !mobile && setExpanded((e) => !e)}
       >
         <div
           className={`
             absolute rounded-lg overflow-hidden bg-[#f50] transition-all duration-300 ease-in-out cursor-pointer
             ${expanded
-              ? 'w-80 h-[120px] z-50 shadow-2xl shadow-black/60 bottom-0 left-0'
-              : 'w-20 h-[60px] bottom-0 left-0'
+              ? mobile
+                ? 'w-[280px] h-[160px] z-50 shadow-2xl shadow-black/60 bottom-0 left-0'
+                : 'w-80 h-[120px] z-50 shadow-2xl shadow-black/60 bottom-0 left-0'
+              : mobile
+                ? 'w-10 h-10 bottom-0 left-0'
+                : 'w-20 h-[60px] bottom-0 left-0'
             }
           `}
         >
           <iframe
             ref={iframeRef}
+            key={trackUrl}
             src={iframeSrc}
             width="100%"
             height="100%"
@@ -220,7 +234,15 @@ const SoundCloudEmbed = forwardRef<SoundCloudEmbedRef, SoundCloudEmbedProps>(
             style={{ border: 'none' }}
             title="SoundCloud Player"
           />
-          {/* Subtle label when collapsed */}
+          {/* Tap hint on mobile when expanded */}
+          {mobile && expanded && !hasPlayedOnce && (
+            <div className="absolute top-1 left-1 right-1 flex justify-center pointer-events-none">
+              <span className="bg-black/70 text-white text-[10px] font-medium px-2 py-1 rounded">
+                Tap the play button below to start
+              </span>
+            </div>
+          )}
+          {/* Label when collapsed */}
           {!expanded && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="absolute bottom-0.5 right-0.5 bg-black/70 rounded px-1 py-0.5">
