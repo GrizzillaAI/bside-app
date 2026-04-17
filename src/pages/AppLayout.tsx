@@ -5,6 +5,7 @@ import { usePlayer, formatTime } from '../lib/player';
 import { LogoMark, Wordmark } from '../components/Logo';
 import YouTubeEmbed from '../components/YouTubeEmbed';
 import SoundCloudEmbed from '../components/SoundCloudEmbed';
+import TikTokEmbed from '../components/TikTokEmbed';
 import TrackReactions from '../components/TrackReactions';
 
 const navItems = [
@@ -22,6 +23,7 @@ export default function AppLayout() {
     togglePlayPause, seek, setVolume, skipNext, skipPrev,
     youtubeVideoId, onYouTubeStateChange, onYouTubeTimeUpdate, onYouTubeReady, youtubeRef,
     soundcloudTrackUrl, onSoundCloudStateChange, onSoundCloudTimeUpdate, onSoundCloudReady, soundcloudRef,
+    tiktokVideoId, onTikTokStateChange, onTikTokTimeUpdate, onTikTokReady, tiktokRef,
   } = usePlayer();
 
   const handleSignOut = async () => {
@@ -122,6 +124,16 @@ export default function AppLayout() {
                 onStateChange={onSoundCloudStateChange}
                 onTimeUpdate={onSoundCloudTimeUpdate}
                 onReady={onSoundCloudReady}
+              />
+            ) : tiktokVideoId ? (
+              <TikTokEmbed
+                ref={tiktokRef}
+                videoId={tiktokVideoId}
+                isPlaying={isPlaying}
+                volume={volume}
+                onStateChange={onTikTokStateChange}
+                onTimeUpdate={onTikTokTimeUpdate}
+                onReady={onTikTokReady}
               />
             ) : (
               <div className="w-12 h-12 rounded-lg bg-graphite flex items-center justify-center shrink-0 overflow-hidden">

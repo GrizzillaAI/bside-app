@@ -1,8 +1,10 @@
 // Mixd Global Audio Player Context
-// Dispatches between three playback backends:
-//   1) HTML Audio element — SoundCloud streams
+// Dispatches between five playback backends:
+//   1) HTML Audio element — fallback
 //   2) Spotify Web Playback SDK — for spotify:track:XXX URIs (Premium users)
 //   3) YouTube IFrame Player API — official ToS-compliant video embed
+//   4) SoundCloud Widget API — official iframe-based player
+//   5) TikTok Embed Player API — official iframe-based player
 
 import {
   createContext, useContext, useRef, useState, useCallback, useEffect, ReactNode,
@@ -38,6 +40,8 @@ interface PlayerState {
   youtubeVideoId: string | null;
   // SoundCloud embed state — exposed so AppLayout can render the embed
   soundcloudTrackUrl: string | null;
+  // TikTok embed state — exposed so AppLayout can render the embed
+  tiktokVideoId: string | null;
   play: (track: PlayerTrack) => void;
   pause: () => void;
   resume: () => void;
@@ -58,17 +62,23 @@ interface PlayerState {
   onSoundCloudTimeUpdate: (currentTime: number, duration: number) => void;
   onSoundCloudReady: () => void;
   soundcloudRef: React.MutableRefObject<{ seek: (s: number) => void; play: () => void; pause: () => void } | null>;
+  // TikTok embed callbacks — called by the TikTokEmbed component
+  onTikTokStateChange: (state: 'playing' | 'paused' | 'ended' | 'buffering') => void;
+  onTikTokTimeUpdate: (currentTime: number, duration: number) => void;
+  onTikTokReady: () => void;
+  tiktokRef: React.MutableRefObject<{ seek: (s: number) => void; play: () => void; pause: () => void } | null>;
 }
 
 const PlayerContext = createContext<PlayerState | undefined>(undefined);
 
-type Backend = 'html' | 'spotify' | 'youtube' | 'soundcloud';
+type Backend = 'html' | 'spotify' | 'youtube' | 'soundcloud' | 'tiktok';
 
 function backendFor(track: PlayerTrack): Backend {
   if (track.source_platform === 'spotify') return 'spotify';
   if (track.audio_url?.startsWith('spotify:')) return 'spotify';
   if (track.source_platform === 'youtube') return 'youtube';
   if (track.source_platform === 'soundcloud') return 'soundcloud';
+  if (track.source_platform === 'tiktok') return 'tiktok';
   return 'html';
 }
 
@@ -79,6 +89,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const spotifyStateCleanupRef = useRef<(() => void) | null>(null);
   const youtubeRef = useRef<{ seek: (s: number) => void; play: () => void; pause: () => void } | null>(null);
   const soundcloudRef = useRef<{ seek: (s: number) => void; play: () => void; pause: () => void } | null>(null);
+  const tiktokRef = useRef<{ seek: (s: number) => void; play: () => void; pause: () => void } | null>(null);
   const [currentTrack, setCurrentTrack] = useState<PlayerTrack | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -88,6 +99,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [historyStack, setHistoryStack] = useState<PlayerTrack[]>([]);
   const [youtubeVideoId, setYoutubeVideoId] = useState<string | null>(null);
   const [soundcloudTrackUrl, setSoundcloudTrackUrl] = useState<string | null>(null);
+  const [tiktokVideoId, setTiktokVideoId] = useState<string | null>(null);
   const [playbackError, setPlaybackError] = useState<string | null>(null);
 
   // YouTube embed callbacks — these are called by the YouTubeEmbed component
@@ -131,6 +143,27 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const onSoundCloudReady = useCallback(() => {
     // Widget is initialized and ready to accept commands
+  }, []);
+
+  // TikTok embed callbacks — these are called by the TikTokEmbed component
+  const onTikTokStateChange = useCallback((state: 'playing' | 'paused' | 'ended' | 'buffering') => {
+    if (backendRef.current !== 'tiktok') return;
+    if (state === 'playing') setIsPlaying(true);
+    if (state === 'paused') setIsPlaying(false);
+    if (state === 'ended') {
+      setTimeout(() => advanceQueue(), 0);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const onTikTokTimeUpdate = useCallback((time: number, dur: number) => {
+    if (backendRef.current !== 'tiktok') return;
+    setCurrentTime(time);
+    setDuration(dur);
+  }, []);
+
+  const onTikTokReady = useCallback(() => {
+    // Player is initialized and ready to accept commands
   }, []);
 
   // Advance to the next track in the queue.
@@ -207,6 +240,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       if (backendRef.current === 'spotify') await pauseSpotify();
       if (backendRef.current === 'youtube') youtubeRef.current?.pause();
       if (backendRef.current === 'soundcloud') soundcloudRef.current?.pause();
+      if (backendRef.current === 'tiktok') tiktokRef.current?.pause();
     }
     backendRef.current = nextBackend;
 
@@ -220,6 +254,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       // Clear other embeds when switching away
       setYoutubeVideoId(null);
       setSoundcloudTrackUrl(null);
+      setTiktokVideoId(null);
       const result = await playSpotifyTrack(track.audio_url);
       if (!result.ok) {
         console.warn('Spotify playback failed:', result.reason);
@@ -237,6 +272,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (nextBackend === 'youtube') {
       // Set the video ID — the YouTubeEmbed component will handle playback
       setSoundcloudTrackUrl(null);
+      setTiktokVideoId(null);
       setYoutubeVideoId(track.source_id);
       setDuration(track.duration_seconds);
       setCurrentTime(0);
@@ -247,7 +283,19 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (nextBackend === 'soundcloud') {
       // Set the track permalink URL — the SoundCloudEmbed component will handle playback
       setYoutubeVideoId(null);
+      setTiktokVideoId(null);
       setSoundcloudTrackUrl(track.source_url);
+      setDuration(track.duration_seconds);
+      setCurrentTime(0);
+      setIsPlaying(true);
+      return;
+    }
+
+    if (nextBackend === 'tiktok') {
+      // Set the video ID — the TikTokEmbed component will handle playback
+      setYoutubeVideoId(null);
+      setSoundcloudTrackUrl(null);
+      setTiktokVideoId(track.source_id);
       setDuration(track.duration_seconds);
       setCurrentTime(0);
       setIsPlaying(true);
@@ -257,6 +305,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     // HTML audio path (fallback)
     setYoutubeVideoId(null);
     setSoundcloudTrackUrl(null);
+    setTiktokVideoId(null);
     if (!audio) return;
     audio.src = track.audio_url;
     audio.play().catch((e) => console.warn('Playback blocked:', e));
@@ -271,6 +320,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (backendRef.current === 'spotify') pauseSpotify();
     else if (backendRef.current === 'youtube') youtubeRef.current?.pause();
     else if (backendRef.current === 'soundcloud') soundcloudRef.current?.pause();
+    else if (backendRef.current === 'tiktok') tiktokRef.current?.pause();
     else audioRef.current?.pause();
   }, []);
 
@@ -278,6 +328,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (backendRef.current === 'spotify') resumeSpotify();
     else if (backendRef.current === 'youtube') youtubeRef.current?.play();
     else if (backendRef.current === 'soundcloud') soundcloudRef.current?.play();
+    else if (backendRef.current === 'tiktok') tiktokRef.current?.play();
     else audioRef.current?.play();
   }, []);
 
@@ -293,6 +344,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       youtubeRef.current?.seek(time);
     } else if (backendRef.current === 'soundcloud') {
       soundcloudRef.current?.seek(time);
+    } else if (backendRef.current === 'tiktok') {
+      tiktokRef.current?.seek(time);
     } else if (audioRef.current) {
       audioRef.current.currentTime = time;
     }
@@ -338,6 +391,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         playbackError,
         youtubeVideoId,
         soundcloudTrackUrl,
+        tiktokVideoId,
         play,
         pause,
         resume,
@@ -356,6 +410,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         onSoundCloudTimeUpdate,
         onSoundCloudReady,
         soundcloudRef,
+        onTikTokStateChange,
+        onTikTokTimeUpdate,
+        onTikTokReady,
+        tiktokRef,
       }}
     >
       {children}

@@ -91,6 +91,30 @@ export default function Library() {
     return null;
   }
 
+  /** Extract a TikTok video ID from a URL */
+  function extractTikTokId(urlStr: string): string | null {
+    try {
+      // Formats:
+      //   https://www.tiktok.com/@user/video/1234567890
+      //   https://vm.tiktok.com/XXXXXXX/  (short link — ID in path)
+      //   https://www.tiktok.com/t/XXXXXXX/
+      const u = new URL(urlStr);
+      const parts = u.pathname.split('/').filter(Boolean);
+      // Look for /video/ID pattern
+      const videoIdx = parts.indexOf('video');
+      if (videoIdx !== -1 && parts[videoIdx + 1]) {
+        return parts[videoIdx + 1];
+      }
+      // For short links (vm.tiktok.com), the ID is sometimes the last path segment
+      // but these are redirect URLs — we'll just try the last numeric segment
+      const lastPart = parts[parts.length - 1];
+      if (lastPart && /^\d{10,}$/.test(lastPart)) {
+        return lastPart;
+      }
+    } catch { /* not a valid URL */ }
+    return null;
+  }
+
   const handleExtract = async () => {
     if (!url) return;
     setLoading(true);
@@ -134,8 +158,41 @@ export default function Library() {
         await loadTracks();
         setUrl('');
         setDetectedPlatform(null);
+      } else if (platform === 'tiktok') {
+        // TikTok: parse video ID from URL, play via iframe
+        const videoId = extractTikTokId(url);
+        if (!videoId) {
+          setExtractError('Could not parse a TikTok video ID from this URL. Try pasting a link like https://www.tiktok.com/@user/video/1234567890');
+          setLoading(false);
+          return;
+        }
+
+        await saveTrackToLibrary({
+          title: 'TikTok Video',
+          artist: 'Unknown',
+          source_platform: 'tiktok',
+          source_url: url,
+          source_id: videoId,
+          thumbnail_url: '',
+          duration_seconds: null,
+        });
+
+        play({
+          title: 'TikTok Video',
+          artist: 'Unknown',
+          thumbnail_url: '',
+          audio_url: '',
+          duration_seconds: 0,
+          source_platform: 'tiktok',
+          source_id: videoId,
+          source_url: url,
+        });
+
+        await loadTracks();
+        setUrl('');
+        setDetectedPlatform(null);
       } else {
-        setExtractError('Paste a YouTube URL to add it. For Spotify and SoundCloud, use Search.');
+        setExtractError('Paste a YouTube or TikTok URL to add it. For Spotify and SoundCloud, use Search.');
       }
     } catch (e) {
       setExtractError((e as Error).message);
@@ -204,7 +261,7 @@ export default function Library() {
               type="url"
               value={url}
               onChange={(e) => handleUrlChange(e.target.value)}
-              placeholder="https://youtube.com/watch?v=..."
+              placeholder="https://youtube.com/watch?v=... or https://tiktok.com/@user/video/..."
               className="w-full bg-[#050509] border border-[#1A1A28] focus:border-[#FF2D87] rounded-lg px-4 py-3 text-sm outline-none transition placeholder:text-[#5E5E7A]"
             />
             {detectedPlatform && (
