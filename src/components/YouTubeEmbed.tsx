@@ -125,13 +125,12 @@ const YouTubeEmbed = forwardRef<YouTubeEmbedRef, YouTubeEmbedProps>(
         height: '100%',
         width: '100%',
         videoId: videoId ?? undefined,
-        host: 'https://www.youtube-nocookie.com',
         playerVars: {
           autoplay: 1,
           controls: 1,
           modestbranding: 1,
           rel: 0,
-          playsinline: 1,
+          playsinline: 1,    // Critical for iOS — plays inline instead of fullscreen
           enablejsapi: 1,
           origin: window.location.origin,
         },
