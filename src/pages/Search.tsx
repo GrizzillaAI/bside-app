@@ -19,6 +19,8 @@ const PLATFORM_META: Record<SourcePlatform, { label: string; badge: string; acce
   spotify:    { label: 'Spotify',     badge: 'SP',   accent: 'bg-green-500/20 text-green-300 border-green-500/30' },
   applemusic: { label: 'Apple Music', badge: 'AM',   accent: 'bg-pink/20 text-pink-400 border-pink/30' },
   soundcloud: { label: 'SoundCloud',  badge: 'SC',   accent: 'bg-orange-500/20 text-orange-300 border-orange-500/30' },
+  podcast:    { label: 'Podcast',     badge: 'POD',  accent: 'bg-purple-500/20 text-purple-300 border-purple-500/30' },
+  bandcamp:   { label: 'Bandcamp',    badge: 'BC',   accent: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' },
 };
 
 // ── Unified Result Card ─────────────────────────────────────────────────
@@ -85,6 +87,42 @@ function ResultCard({
           audio_url: '',  // SoundCloud Widget handles playback via iframe
           duration_seconds: result.duration_seconds,
           source_platform: 'soundcloud',
+          source_id: result.source_id,
+          source_url: result.external_url,
+        };
+        play(track);
+        setLoading(false);
+        return;
+      }
+
+      // Podcast: full episode playback via HTML5 audio (stream_url or preview_url)
+      if (result.source_platform === 'podcast') {
+        const audioSrc = result.stream_url || result.preview_url || '';
+        const track: PlayerTrack = {
+          title: result.title,
+          artist: result.artist,
+          thumbnail_url: result.thumbnail_url,
+          audio_url: audioSrc,
+          duration_seconds: result.duration_seconds,
+          source_platform: 'podcast',
+          source_id: result.source_id,
+          source_url: result.external_url,
+        };
+        play(track);
+        setLoading(false);
+        return;
+      }
+
+      // Apple Music: 30-second preview via HTML5 audio
+      if (result.source_platform === 'applemusic') {
+        const audioSrc = result.preview_url || '';
+        const track: PlayerTrack = {
+          title: result.title,
+          artist: result.artist,
+          thumbnail_url: result.thumbnail_url,
+          audio_url: audioSrc,
+          duration_seconds: result.duration_seconds,
+          source_platform: 'applemusic',
           source_id: result.source_id,
           source_url: result.external_url,
         };
@@ -330,7 +368,7 @@ export default function Search() {
         Mix everything.
       </h1>
       <p className="text-sm text-silver mb-6">
-        Search across YouTube, Spotify, and SoundCloud — all in one feed.
+        Search across YouTube, Spotify, SoundCloud, Apple Music, and Podcasts — all in one feed.
       </p>
 
       {/* Spotify connection banner */}
@@ -466,7 +504,7 @@ export default function Search() {
                   </button>
                 ))}
               </div>
-              <div className="mt-8 flex items-center justify-center gap-6 text-xs text-ash">
+              <div className="mt-8 flex items-center justify-center gap-6 text-xs text-ash flex-wrap">
                 <div className="flex items-center gap-1.5">
                   <Youtube className="w-3.5 h-3.5" /> YouTube
                 </div>
@@ -475,6 +513,12 @@ export default function Search() {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Music className="w-3.5 h-3.5" /> SoundCloud
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Music className="w-3.5 h-3.5" /> Apple Music
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Music className="w-3.5 h-3.5" /> Podcasts
                 </div>
               </div>
             </>

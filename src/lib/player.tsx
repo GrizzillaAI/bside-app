@@ -13,6 +13,7 @@ import {
   playSpotifyTrack, pauseSpotify, resumeSpotify, seekSpotify,
   setSpotifyVolume, onSpotifyStateChanged,
 } from './spotify';
+import { logB3Event } from './api';
 
 // Compatibility type — the existing app passes "PlayerTrack" objects that
 // are a superset of QueueTrack. We accept either and narrow as needed.
@@ -42,6 +43,8 @@ interface PlayerState {
   soundcloudTrackUrl: string | null;
   // TikTok embed state — exposed so AppLayout can render the embed
   tiktokVideoId: string | null;
+  // Bandcamp embed state — exposed so AppLayout can render the embed
+  bandcampEmbedUrl: string | null;
   play: (track: PlayerTrack) => void;
   pause: () => void;
   resume: () => void;
@@ -67,11 +70,13 @@ interface PlayerState {
   onTikTokTimeUpdate: (currentTime: number, duration: number) => void;
   onTikTokReady: () => void;
   tiktokRef: React.MutableRefObject<{ seek: (s: number) => void; play: () => void; pause: () => void } | null>;
+  // Bandcamp embed ref (no-op — Bandcamp embed has no JS API)
+  bandcampRef: React.MutableRefObject<{ seek: (s: number) => void; play: () => void; pause: () => void } | null>;
 }
 
 const PlayerContext = createContext<PlayerState | undefined>(undefined);
 
-type Backend = 'html' | 'spotify' | 'youtube' | 'soundcloud' | 'tiktok';
+type Backend = 'html' | 'spotify' | 'youtube' | 'soundcloud' | 'tiktok' | 'bandcamp';
 
 function backendFor(track: PlayerTrack): Backend {
   if (track.source_platform === 'spotify') return 'spotify';
@@ -79,6 +84,7 @@ function backendFor(track: PlayerTrack): Backend {
   if (track.source_platform === 'youtube') return 'youtube';
   if (track.source_platform === 'soundcloud') return 'soundcloud';
   if (track.source_platform === 'tiktok') return 'tiktok';
+  if (track.source_platform === 'bandcamp') return 'bandcamp';
   return 'html';
 }
 
@@ -90,6 +96,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const youtubeRef = useRef<{ seek: (s: number) => void; play: () => void; pause: () => void } | null>(null);
   const soundcloudRef = useRef<{ seek: (s: number) => void; play: () => void; pause: () => void } | null>(null);
   const tiktokRef = useRef<{ seek: (s: number) => void; play: () => void; pause: () => void } | null>(null);
+  const bandcampRef = useRef<{ seek: (s: number) => void; play: () => void; pause: () => void } | null>(null);
   const [currentTrack, setCurrentTrack] = useState<PlayerTrack | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -100,6 +107,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [youtubeVideoId, setYoutubeVideoId] = useState<string | null>(null);
   const [soundcloudTrackUrl, setSoundcloudTrackUrl] = useState<string | null>(null);
   const [tiktokVideoId, setTiktokVideoId] = useState<string | null>(null);
+  const [bandcampEmbedUrl, setBandcampEmbedUrl] = useState<string | null>(null);
   const [playbackError, setPlaybackError] = useState<string | null>(null);
 
   // YouTube embed callbacks — these are called by the YouTubeEmbed component
@@ -168,7 +176,19 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   // Advance to the next track in the queue.
   // Keeps isPlaying=true during transitions so the UI doesn't flicker.
+  // Also logs play.completed for the track that just ended.
   const advanceQueue = useCallback(() => {
+    // B3: log play.completed for the current track (fire-and-forget)
+    setCurrentTrack((ct) => {
+      if (ct) {
+        logB3Event('play.completed', {
+          source_platform: ct.source_platform,
+          source_id: ct.source_id,
+          title: ct.title,
+        });
+      }
+      return ct; // don't change the value — just reading it
+    });
     setQueue((q) => {
       if (q.length === 0) {
         setIsPlaying(false);
@@ -241,6 +261,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       if (backendRef.current === 'youtube') youtubeRef.current?.pause();
       if (backendRef.current === 'soundcloud') soundcloudRef.current?.pause();
       if (backendRef.current === 'tiktok') tiktokRef.current?.pause();
+      if (backendRef.current === 'bandcamp') bandcampRef.current?.pause();
     }
     backendRef.current = nextBackend;
 
@@ -250,11 +271,19 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       return track;
     });
 
+    // B3: log play.started event (fire-and-forget)
+    logB3Event('play.started', {
+      source_platform: track.source_platform,
+      source_id: track.source_id,
+      title: track.title,
+    });
+
     if (nextBackend === 'spotify') {
       // Clear other embeds when switching away
       setYoutubeVideoId(null);
       setSoundcloudTrackUrl(null);
       setTiktokVideoId(null);
+      setBandcampEmbedUrl(null);
       const result = await playSpotifyTrack(track.audio_url);
       if (!result.ok) {
         console.warn('Spotify playback failed:', result.reason);
@@ -273,6 +302,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       // Set the video ID — the YouTubeEmbed component will handle playback
       setSoundcloudTrackUrl(null);
       setTiktokVideoId(null);
+      setBandcampEmbedUrl(null);
       setYoutubeVideoId(track.source_id);
       setDuration(track.duration_seconds);
       setCurrentTime(0);
@@ -284,6 +314,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       // Set the track permalink URL — the SoundCloudEmbed component will handle playback
       setYoutubeVideoId(null);
       setTiktokVideoId(null);
+      setBandcampEmbedUrl(null);
       setSoundcloudTrackUrl(track.source_url);
       setDuration(track.duration_seconds);
       setCurrentTime(0);
@@ -295,6 +326,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       // Set the video ID — the TikTokEmbed component will handle playback
       setYoutubeVideoId(null);
       setSoundcloudTrackUrl(null);
+      setBandcampEmbedUrl(null);
       setTiktokVideoId(track.source_id);
       setDuration(track.duration_seconds);
       setCurrentTime(0);
@@ -302,10 +334,25 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // HTML audio path (fallback)
+    if (nextBackend === 'bandcamp') {
+      // Bandcamp: build the embed URL from source_id (format: "track:12345" or "album:12345")
+      setYoutubeVideoId(null);
+      setSoundcloudTrackUrl(null);
+      setTiktokVideoId(null);
+      const [embedType, embedId] = (track.source_id || '').split(':');
+      const bcUrl = `https://bandcamp.com/EmbeddedPlayer/${embedType}=${embedId}/size=small/bgcol=0B0B12/linkcol=FF2D87/transparent=true/`;
+      setBandcampEmbedUrl(bcUrl);
+      setDuration(track.duration_seconds);
+      setCurrentTime(0);
+      setIsPlaying(true); // Bandcamp auto-plays in embed
+      return;
+    }
+
+    // HTML audio path (fallback — podcast, applemusic, etc.)
     setYoutubeVideoId(null);
     setSoundcloudTrackUrl(null);
     setTiktokVideoId(null);
+    setBandcampEmbedUrl(null);
     if (!audio) return;
     audio.src = track.audio_url;
     audio.play().catch((e) => console.warn('Playback blocked:', e));
@@ -321,6 +368,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     else if (backendRef.current === 'youtube') youtubeRef.current?.pause();
     else if (backendRef.current === 'soundcloud') soundcloudRef.current?.pause();
     else if (backendRef.current === 'tiktok') tiktokRef.current?.pause();
+    else if (backendRef.current === 'bandcamp') bandcampRef.current?.pause();
     else audioRef.current?.pause();
   }, []);
 
@@ -329,6 +377,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     else if (backendRef.current === 'youtube') youtubeRef.current?.play();
     else if (backendRef.current === 'soundcloud') soundcloudRef.current?.play();
     else if (backendRef.current === 'tiktok') tiktokRef.current?.play();
+    else if (backendRef.current === 'bandcamp') bandcampRef.current?.play();
     else audioRef.current?.play();
   }, []);
 
@@ -346,6 +395,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       soundcloudRef.current?.seek(time);
     } else if (backendRef.current === 'tiktok') {
       tiktokRef.current?.seek(time);
+    } else if (backendRef.current === 'bandcamp') {
+      bandcampRef.current?.seek(time);
     } else if (audioRef.current) {
       audioRef.current.currentTime = time;
     }
@@ -359,8 +410,17 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const skipNext = useCallback(() => {
+    // B3: log skip event
+    if (currentTrack) {
+      logB3Event('play.skipped', {
+        source_platform: currentTrack.source_platform,
+        source_id: currentTrack.source_id,
+        title: currentTrack.title,
+        position_seconds: currentTime,
+      });
+    }
     advanceQueue();
-  }, [advanceQueue]);
+  }, [advanceQueue, currentTrack, currentTime]);
 
   const skipPrev = useCallback(() => {
     setHistoryStack((h) => {
@@ -392,6 +452,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         youtubeVideoId,
         soundcloudTrackUrl,
         tiktokVideoId,
+        bandcampEmbedUrl,
         play,
         pause,
         resume,
@@ -414,6 +475,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         onTikTokTimeUpdate,
         onTikTokReady,
         tiktokRef,
+        bandcampRef,
       }}
     >
       {children}

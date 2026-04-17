@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Play, Pause, Clock, Music, Link as LinkIcon, Loader2, Trash2, Plus, ListMusic, ArrowUpDown, Filter } from 'lucide-react';
 import { usePlayer, formatTime } from '../lib/player';
 import type { PlayerTrack } from '../lib/player';
-import { saveTrackToLibrary, resolveTikTokUrl } from '../lib/api';
+import { saveTrackToLibrary, resolveTikTokUrl, resolveBandcampUrl } from '../lib/api';
 import { supabase } from '../lib/supabase';
 import AddToPlaylistModal from '../components/AddToPlaylistModal';
 import type { TrackForPlaylist } from '../components/AddToPlaylistModal';
@@ -11,6 +11,7 @@ import type { TrackForPlaylist } from '../components/AddToPlaylistModal';
 function detectPlatform(url: string): string | null {
   if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
   if (url.includes('tiktok.com')) return 'tiktok';
+  if (url.includes('bandcamp.com')) return 'bandcamp';
   if (url.includes('instagram.com')) return 'instagram';
   if (url.includes('x.com') || url.includes('twitter.com')) return 'twitter';
   if (url.includes('rss') || url.includes('feed') || url.includes('.xml')) return 'podcast';
@@ -26,6 +27,7 @@ const PLATFORM_LABELS: Record<string, string> = {
   instagram: 'Instagram',
   twitter: 'X',
   podcast: 'Podcast',
+  bandcamp: 'Bandcamp',
   upload: 'Upload',
 };
 
@@ -203,8 +205,39 @@ export default function Library() {
         await loadTracks();
         setUrl('');
         setDetectedPlatform(null);
+      } else if (platform === 'bandcamp') {
+        // Bandcamp: resolve via oEmbed API to get title, artist, embed info
+        const resolved = await resolveBandcampUrl(url);
+
+        // source_id stores "track:12345" or "album:12345" for embed URL construction
+        const sourceId = `${resolved.embed_type}:${resolved.embed_id}`;
+
+        await saveTrackToLibrary({
+          title: resolved.title || 'Bandcamp Track',
+          artist: resolved.artist || 'Unknown Artist',
+          source_platform: 'bandcamp',
+          source_url: url,
+          source_id: sourceId,
+          thumbnail_url: resolved.thumbnail_url || '',
+          duration_seconds: null,
+        });
+
+        play({
+          title: resolved.title || 'Bandcamp Track',
+          artist: resolved.artist || 'Unknown Artist',
+          thumbnail_url: resolved.thumbnail_url || '',
+          audio_url: '',
+          duration_seconds: 0,
+          source_platform: 'bandcamp',
+          source_id: sourceId,
+          source_url: url,
+        });
+
+        await loadTracks();
+        setUrl('');
+        setDetectedPlatform(null);
       } else {
-        setExtractError('Paste a YouTube or TikTok URL to add it. For Spotify and SoundCloud, use Search.');
+        setExtractError('Paste a YouTube, TikTok, or Bandcamp URL to add it. For Spotify, SoundCloud, Apple Music, and Podcasts, use Search.');
       }
     } catch (e) {
       setExtractError((e as Error).message);
@@ -222,8 +255,8 @@ export default function Library() {
 
     // Build the correct audio_url per platform:
     // - Spotify: needs spotify:track:XXX URI for Web Playback SDK
-    // - YouTube: empty (iframe handles playback via source_id)
-    // - SoundCloud: empty (Widget API iframe handles playback via source_url)
+    // - YouTube / SoundCloud / TikTok / Bandcamp: empty (iframe handles playback)
+    // - Podcast / Apple Music: preview_url or stream_url (handled by HTML audio)
     let audioUrl = '';
     if (t.source_platform === 'spotify' && t.source_id) {
       audioUrl = `spotify:track:${t.source_id}`;
@@ -273,7 +306,7 @@ export default function Library() {
               type="url"
               value={url}
               onChange={(e) => handleUrlChange(e.target.value)}
-              placeholder="https://youtube.com/watch?v=... or https://tiktok.com/@user/video/..."
+              placeholder="YouTube, TikTok, or Bandcamp URL..."
               className="w-full bg-[#050509] border border-[#1A1A28] focus:border-[#FF2D87] rounded-lg px-4 py-3 text-sm outline-none transition placeholder:text-[#5E5E7A]"
             />
             {detectedPlatform && (

@@ -7,6 +7,7 @@ import { LogoMark, Wordmark } from '../components/Logo';
 import YouTubeEmbed from '../components/YouTubeEmbed';
 import SoundCloudEmbed from '../components/SoundCloudEmbed';
 import TikTokEmbed from '../components/TikTokEmbed';
+import BandcampEmbed from '../components/BandcampEmbed';
 import TrackReactions from '../components/TrackReactions';
 
 const navItems = [
@@ -41,6 +42,7 @@ export default function AppLayout() {
     youtubeVideoId, onYouTubeStateChange, onYouTubeTimeUpdate, onYouTubeReady, youtubeRef,
     soundcloudTrackUrl, onSoundCloudStateChange, onSoundCloudTimeUpdate, onSoundCloudReady, soundcloudRef,
     tiktokVideoId, onTikTokStateChange, onTikTokTimeUpdate, onTikTokReady, tiktokRef,
+    bandcampEmbedUrl, bandcampRef,
   } = usePlayer();
 
   const handleSignOut = async () => {
@@ -80,6 +82,11 @@ export default function AppLayout() {
           onStateChange={onTikTokStateChange}
           onTimeUpdate={onTikTokTimeUpdate}
           onReady={onTikTokReady}
+        />
+      ) : bandcampEmbedUrl ? (
+        <BandcampEmbed
+          ref={bandcampRef}
+          embedUrl={bandcampEmbedUrl}
         />
       ) : (
         <div className={`${isMobile ? 'w-10 h-10' : 'w-12 h-12'} rounded-lg bg-graphite flex items-center justify-center shrink-0 overflow-hidden`}>

@@ -4,7 +4,7 @@ import { supabase } from './supabase';
 // ---------------------------------------------------------------------------
 // Unified Multi-Source Search
 // ---------------------------------------------------------------------------
-export type SourcePlatform = 'youtube' | 'spotify' | 'applemusic' | 'soundcloud';
+export type SourcePlatform = 'youtube' | 'spotify' | 'applemusic' | 'soundcloud' | 'podcast' | 'bandcamp';
 
 // Unified result shape — every source normalizes to this
 export interface UnifiedResult {
@@ -84,6 +84,19 @@ export async function searchAppleMusic(query: string, maxResults = 20): Promise<
 }
 
 // ---------------------------------------------------------------------------
+// Podcast Search (iTunes / podcast episodes)
+// ---------------------------------------------------------------------------
+export async function searchPodcast(query: string, maxResults = 20): Promise<{
+  results: UnifiedResult[];
+}> {
+  const { data, error } = await supabase.functions.invoke('podcast-search', {
+    body: { query, maxResults },
+  });
+  if (error) throw new Error(error.message);
+  return data ?? { results: [] };
+}
+
+// ---------------------------------------------------------------------------
 // SoundCloud Search
 // ---------------------------------------------------------------------------
 export async function searchSoundCloud(query: string, maxResults = 20): Promise<{
@@ -106,12 +119,14 @@ export interface MultiSourceStatus {
   spotify: 'ok' | 'error' | 'skipped';
   applemusic: 'ok' | 'error' | 'skipped';
   soundcloud: 'ok' | 'error' | 'skipped';
+  podcast: 'ok' | 'error' | 'skipped';
+  bandcamp: 'ok' | 'error' | 'skipped';
 }
 
 // Phase 1 default sources: YouTube + Spotify (Premium-gated) + SoundCloud.
 // Apple Music is deferred to Phase 2 — the Edge Function remains deployed but
 // is not included in the default fan-out.
-export const PHASE_1_SOURCES: SourcePlatform[] = ['youtube', 'spotify', 'soundcloud'];
+export const PHASE_1_SOURCES: SourcePlatform[] = ['youtube', 'spotify', 'soundcloud', 'podcast', 'applemusic'];
 
 export async function searchAll(
   query: string,
@@ -123,6 +138,8 @@ export async function searchAll(
     spotify: 'skipped',
     applemusic: 'skipped',
     soundcloud: 'skipped',
+    podcast: 'skipped',
+    bandcamp: 'skipped',
   };
   const errors: Record<string, string> = {};
 
@@ -158,6 +175,11 @@ export async function searchAll(
       if (src === 'soundcloud') {
         const { results } = await searchSoundCloud(query, perSourceLimit);
         status.soundcloud = 'ok';
+        return results;
+      }
+      if (src === 'podcast') {
+        const { results } = await searchPodcast(query, perSourceLimit);
+        status.podcast = 'ok';
         return results;
       }
       return [];
@@ -214,6 +236,30 @@ export async function resolveTikTokUrl(url: string): Promise<TikTokResolveResult
   });
   if (error) throw new Error(error.message);
   if (!data?.video_id) throw new Error(data?.error || 'Could not resolve TikTok video');
+  return data;
+}
+
+// ---------------------------------------------------------------------------
+// Bandcamp URL Resolver
+// Resolves a Bandcamp track or album URL via the oEmbed API. Returns
+// title, artist, thumbnail, embed type (track/album), and embed ID for
+// iframe embedding.
+// ---------------------------------------------------------------------------
+export interface BandcampResolveResult {
+  title: string;
+  artist: string;
+  thumbnail_url: string;
+  embed_type: 'track' | 'album';
+  embed_id: string;
+  url: string;
+}
+
+export async function resolveBandcampUrl(url: string): Promise<BandcampResolveResult> {
+  const { data, error } = await supabase.functions.invoke('bandcamp-resolve', {
+    body: { url },
+  });
+  if (error) throw new Error(error.message);
+  if (!data?.embed_id) throw new Error(data?.error || 'Could not resolve Bandcamp URL');
   return data;
 }
 
@@ -432,6 +478,14 @@ export async function saveTrackToLibrary(track: {
     .upsert({ user_id: user.id, track_id: trackRow.id }, { onConflict: 'user_id,track_id' });
 
   if (libErr) throw new Error(libErr.message);
+
+  // B3: log track saved event (fire-and-forget)
+  logB3Event('track.saved', {
+    track_id: trackRow.id,
+    source_platform: track.source_platform,
+    title: track.title,
+  });
+
   return trackRow;
 }
 
