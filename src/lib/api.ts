@@ -196,6 +196,28 @@ export async function resolveSoundCloudStream(trackId: string): Promise<string> 
 }
 
 // ---------------------------------------------------------------------------
+// TikTok URL Resolver
+// Resolves any TikTok URL (including short /t/ links) to a video ID +
+// metadata via the oEmbed API. Runs server-side to avoid CORS issues.
+// ---------------------------------------------------------------------------
+export interface TikTokResolveResult {
+  video_id: string;
+  title: string;
+  author: string;
+  author_url: string;
+  thumbnail_url: string;
+}
+
+export async function resolveTikTokUrl(url: string): Promise<TikTokResolveResult> {
+  const { data, error } = await supabase.functions.invoke('tiktok-resolve', {
+    body: { url },
+  });
+  if (error) throw new Error(error.message);
+  if (!data?.video_id) throw new Error(data?.error || 'Could not resolve TikTok video');
+  return data;
+}
+
+// ---------------------------------------------------------------------------
 // Audio Extraction
 // ---------------------------------------------------------------------------
 export interface ExtractionResult {

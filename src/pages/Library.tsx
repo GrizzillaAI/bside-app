@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Play, Pause, Clock, Music, Link as LinkIcon, Loader2, Trash2, Plus, ListMusic } from 'lucide-react';
 import { usePlayer, formatTime } from '../lib/player';
 import type { PlayerTrack } from '../lib/player';
-import { saveTrackToLibrary } from '../lib/api';
+import { saveTrackToLibrary, resolveTikTokUrl } from '../lib/api';
 import { supabase } from '../lib/supabase';
 import AddToPlaylistModal from '../components/AddToPlaylistModal';
 import type { TrackForPlaylist } from '../components/AddToPlaylistModal';
@@ -91,29 +91,6 @@ export default function Library() {
     return null;
   }
 
-  /** Extract a TikTok video ID from a URL */
-  function extractTikTokId(urlStr: string): string | null {
-    try {
-      // Formats:
-      //   https://www.tiktok.com/@user/video/1234567890
-      //   https://vm.tiktok.com/XXXXXXX/  (short link — ID in path)
-      //   https://www.tiktok.com/t/XXXXXXX/
-      const u = new URL(urlStr);
-      const parts = u.pathname.split('/').filter(Boolean);
-      // Look for /video/ID pattern
-      const videoIdx = parts.indexOf('video');
-      if (videoIdx !== -1 && parts[videoIdx + 1]) {
-        return parts[videoIdx + 1];
-      }
-      // For short links (vm.tiktok.com), the ID is sometimes the last path segment
-      // but these are redirect URLs — we'll just try the last numeric segment
-      const lastPart = parts[parts.length - 1];
-      if (lastPart && /^\d{10,}$/.test(lastPart)) {
-        return lastPart;
-      }
-    } catch { /* not a valid URL */ }
-    return null;
-  }
 
   const handleExtract = async () => {
     if (!url) return;
@@ -159,32 +136,27 @@ export default function Library() {
         setUrl('');
         setDetectedPlatform(null);
       } else if (platform === 'tiktok') {
-        // TikTok: parse video ID from URL, play via iframe
-        const videoId = extractTikTokId(url);
-        if (!videoId) {
-          setExtractError('Could not parse a TikTok video ID from this URL. Try pasting a link like https://www.tiktok.com/@user/video/1234567890');
-          setLoading(false);
-          return;
-        }
+        // TikTok: resolve via oEmbed API (handles short links, /t/ links, and full URLs)
+        const resolved = await resolveTikTokUrl(url);
 
         await saveTrackToLibrary({
-          title: 'TikTok Video',
-          artist: 'Unknown',
+          title: resolved.title || 'TikTok Video',
+          artist: resolved.author || 'Unknown',
           source_platform: 'tiktok',
           source_url: url,
-          source_id: videoId,
-          thumbnail_url: '',
+          source_id: resolved.video_id,
+          thumbnail_url: resolved.thumbnail_url || '',
           duration_seconds: null,
         });
 
         play({
-          title: 'TikTok Video',
-          artist: 'Unknown',
-          thumbnail_url: '',
+          title: resolved.title || 'TikTok Video',
+          artist: resolved.author || 'Unknown',
+          thumbnail_url: resolved.thumbnail_url || '',
           audio_url: '',
           duration_seconds: 0,
           source_platform: 'tiktok',
-          source_id: videoId,
+          source_id: resolved.video_id,
           source_url: url,
         });
 
@@ -275,8 +247,8 @@ export default function Library() {
             disabled={!url || loading}
             className="bg-[#FF2D87] hover:bg-[#E01570] disabled:opacity-40 px-6 py-3 rounded-lg text-sm font-semibold transition flex items-center gap-2 shrink-0"
           >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Music className="w-4 h-4" />}
-            {loading ? 'Extracting...' : 'Extract Audio'}
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            {loading ? 'Adding...' : 'Add to Library'}
           </button>
         </div>
         {extractError && (
