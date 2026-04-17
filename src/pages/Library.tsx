@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Play, Pause, Clock, Music, Link as LinkIcon, Loader2, Trash2, Plus, ListMusic } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Play, Pause, Clock, Music, Link as LinkIcon, Loader2, Trash2, Plus, ListMusic, ArrowUpDown, Filter } from 'lucide-react';
 import { usePlayer, formatTime } from '../lib/player';
 import type { PlayerTrack } from '../lib/player';
 import { saveTrackToLibrary, resolveTikTokUrl } from '../lib/api';
@@ -54,6 +54,46 @@ export default function Library() {
   const [tracks, setTracks] = useState<LibraryItem[]>([]);
   const [loadingTracks, setLoadingTracks] = useState(true);
   const [playlistTrack, setPlaylistTrack] = useState<TrackForPlaylist | null>(null);
+
+  // Sort & filter
+  type SortKey = 'recent' | 'title' | 'artist' | 'platform' | 'duration';
+  type FilterPlatform = 'all' | string;
+  const [sortBy, setSortBy] = useState<SortKey>('recent');
+  const [filterPlatform, setFilterPlatform] = useState<FilterPlatform>('all');
+
+  // Derive unique platforms from library
+  const availablePlatforms = useMemo(() => {
+    const set = new Set(tracks.map((t) => t.track.source_platform));
+    return Array.from(set).sort();
+  }, [tracks]);
+
+  // Sorted + filtered tracks
+  const displayTracks = useMemo(() => {
+    let filtered = tracks;
+    if (filterPlatform !== 'all') {
+      filtered = filtered.filter((t) => t.track.source_platform === filterPlatform);
+    }
+    const sorted = [...filtered];
+    switch (sortBy) {
+      case 'title':
+        sorted.sort((a, b) => (a.track.title || '').localeCompare(b.track.title || ''));
+        break;
+      case 'artist':
+        sorted.sort((a, b) => (a.track.artist || '').localeCompare(b.track.artist || ''));
+        break;
+      case 'platform':
+        sorted.sort((a, b) => a.track.source_platform.localeCompare(b.track.source_platform));
+        break;
+      case 'duration':
+        sorted.sort((a, b) => (b.track.duration_seconds || 0) - (a.track.duration_seconds || 0));
+        break;
+      case 'recent':
+      default:
+        sorted.sort((a, b) => new Date(b.added_at).getTime() - new Date(a.added_at).getTime());
+        break;
+    }
+    return sorted;
+  }, [tracks, sortBy, filterPlatform]);
 
   // Load library tracks
   useEffect(() => {
@@ -256,10 +296,65 @@ export default function Library() {
         )}
       </div>
 
-      {/* Library */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold">Your Library</h2>
-        <span className="text-sm text-[#5E5E7A]">{tracks.length} tracks</span>
+      {/* Library header + sort/filter controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-bold">Your Library</h2>
+          <span className="text-sm text-[#5E5E7A]">
+            {filterPlatform !== 'all'
+              ? `${displayTracks.length} of ${tracks.length} tracks`
+              : `${tracks.length} tracks`
+            }
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Sort dropdown */}
+          <div className="flex items-center gap-1.5 bg-[#0B0B12] border border-[#1A1A28] rounded-lg px-3 py-1.5">
+            <ArrowUpDown className="w-3.5 h-3.5 text-[#5E5E7A]" />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortKey)}
+              className="bg-transparent text-xs text-[#EDEDF3] outline-none cursor-pointer"
+            >
+              <option value="recent">Recently Added</option>
+              <option value="title">Title A-Z</option>
+              <option value="artist">Artist A-Z</option>
+              <option value="platform">Platform</option>
+              <option value="duration">Duration</option>
+            </select>
+          </div>
+
+          {/* Platform filter pills */}
+          {availablePlatforms.length > 1 && (
+            <div className="flex items-center gap-1.5">
+              <Filter className="w-3.5 h-3.5 text-[#5E5E7A]" />
+              <button
+                onClick={() => setFilterPlatform('all')}
+                className={`px-2.5 py-1 rounded-full text-xs font-medium transition ${
+                  filterPlatform === 'all'
+                    ? 'bg-[#FF2D87] text-white'
+                    : 'bg-[#1A1A28] text-[#5E5E7A] hover:text-[#EDEDF3]'
+                }`}
+              >
+                All
+              </button>
+              {availablePlatforms.map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setFilterPlatform(filterPlatform === p ? 'all' : p)}
+                  className={`px-2.5 py-1 rounded-full text-xs font-medium transition ${
+                    filterPlatform === p
+                      ? 'bg-[#FF2D87] text-white'
+                      : 'bg-[#1A1A28] text-[#5E5E7A] hover:text-[#EDEDF3]'
+                  }`}
+                >
+                  {PLATFORM_LABELS[p] || p}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {loadingTracks ? (
@@ -272,9 +367,20 @@ export default function Library() {
           <Music className="w-12 h-12 text-[#1A1A28] mx-auto mb-4" />
           <p className="text-[#5E5E7A]">Your library is empty. Paste a link above or search to get started.</p>
         </div>
+      ) : displayTracks.length === 0 ? (
+        <div className="text-center py-16">
+          <Filter className="w-10 h-10 text-[#1A1A28] mx-auto mb-4" />
+          <p className="text-[#5E5E7A]">No tracks match this filter.</p>
+          <button
+            onClick={() => setFilterPlatform('all')}
+            className="text-sm text-[#FF2D87] hover:underline mt-2"
+          >
+            Show all tracks
+          </button>
+        </div>
       ) : (
         <div className="space-y-2">
-          {tracks.map((item) => {
+          {displayTracks.map((item) => {
             const t = item.track;
             const isThis = currentTrack?.source_id === t.source_id;
             return (

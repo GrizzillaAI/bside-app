@@ -7,6 +7,7 @@ import AppLayout from './pages/AppLayout';
 import Library from './pages/Library';
 import Search from './pages/Search';
 import Playlists from './pages/Playlists';
+import ImportYouTube from './pages/ImportYouTube';
 import Settings from './pages/Settings';
 import SpotifyCallback from './pages/SpotifyCallback';
 import YouTubeCallback from './pages/YouTubeCallback';
@@ -52,6 +53,7 @@ export default function App() {
         <Route path="library" element={<Library />} />
         <Route path="search" element={<Search />} />
         <Route path="playlists" element={<Playlists />} />
+        <Route path="import/youtube" element={<ImportYouTube />} />
         <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>

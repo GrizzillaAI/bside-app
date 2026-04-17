@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Home, Search, Library, ListMusic, Settings, Music, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Crown, LogOut, Menu, X } from 'lucide-react';
+import { Home, Search, Library, ListMusic, Download, Settings, Music, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Crown, LogOut, Menu, X } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { usePlayer, formatTime } from '../lib/player';
 import { LogoMark, Wordmark } from '../components/Logo';
@@ -14,6 +14,7 @@ const navItems = [
   { to: '/app/search', icon: Search, label: 'Search' },
   { to: '/app/library', icon: Library, label: 'Library' },
   { to: '/app/playlists', icon: ListMusic, label: 'Playlists' },
+  { to: '/app/import/youtube', icon: Download, label: 'Import' },
 ];
 
 /** Detect mobile via JS so we only render ONE set of embeds (never two). */
