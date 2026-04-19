@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Play, Pause, Clock, Music, Link as LinkIcon, Loader2, Trash2, Plus, ListMusic, ArrowUpDown, Filter } from 'lucide-react';
+import { Play, Pause, Clock, Music, Link as LinkIcon, Loader2, Trash2, Plus, ListMusic, ArrowUpDown, Filter, Download } from 'lucide-react';
 import { usePlayer, formatTime } from '../lib/player';
 import type { PlayerTrack } from '../lib/player';
 import { saveTrackToLibrary, resolveTikTokUrl, resolveBandcampUrl } from '../lib/api';
@@ -445,6 +445,19 @@ export default function Library() {
                   </span>
                 )}
                 <span className="text-xs text-[#5E5E7A] shrink-0 w-24 text-right">{formatAdded(item.added_at)}</span>
+                {/* Podcast download button */}
+                {t.source_platform === 'podcast' && t.source_url && (
+                  <a
+                    href={t.source_url}
+                    download
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#5E5E7A] hover:text-green-400 transition opacity-0 group-hover:opacity-100"
+                    title="Download episode for offline listening"
+                  >
+                    <Download className="w-4 h-4" />
+                  </a>
+                )}
                 <button
                   onClick={() => setPlaylistTrack({
                     title: t.title,

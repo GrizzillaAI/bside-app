@@ -16,6 +16,8 @@ const SPOTIFY_SCOPES = [
   'user-read-private',
   'user-read-playback-state',
   'user-modify-playback-state',
+  'playlist-read-private',
+  'playlist-read-collaborative',
 ].join(' ');
 
 export interface SpotifyConnection {
@@ -317,4 +319,45 @@ export function onSpotifyStateChanged(cb: (state: any) => void): () => void {
   if (!activePlayer) return () => { /* noop */ };
   activePlayer.addListener('player_state_changed', cb);
   return () => activePlayer?.removeListener('player_state_changed');
+}
+
+// ── Spotify Playlist Import ─────────────────────────────────────────────────
+export interface SpotifyPlaylistSummary {
+  id: string;
+  title: string;
+  description: string;
+  thumbnail_url: string;
+  item_count: number;
+  owner: string;
+  is_public: boolean;
+}
+
+export interface SpotifyPlaylistItem {
+  track_id: string;
+  title: string;
+  artist: string;
+  album: string;
+  thumbnail_url: string;
+  duration_seconds: number;
+  external_url: string;
+  preview_url: string | null;
+}
+
+/** Fetches the user's Spotify playlists via edge function */
+export async function getMySpotifyPlaylists(): Promise<SpotifyPlaylistSummary[]> {
+  const { data, error } = await supabase.functions.invoke('spotify-playlists', {
+    body: { action: 'list' },
+  });
+  if (error) throw new Error(error.message);
+  if (data?.needs_reconnect) throw new Error(data.error);
+  return data?.playlists ?? [];
+}
+
+/** Fetches all tracks in a specific Spotify playlist */
+export async function getSpotifyPlaylistItems(playlistId: string): Promise<SpotifyPlaylistItem[]> {
+  const { data, error } = await supabase.functions.invoke('spotify-playlists', {
+    body: { action: 'items', playlist_id: playlistId },
+  });
+  if (error) throw new Error(error.message);
+  return data?.items ?? [];
 }

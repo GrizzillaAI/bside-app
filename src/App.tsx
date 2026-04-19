@@ -4,10 +4,11 @@ import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
 import ForgotPassword from './pages/ForgotPassword';
 import AppLayout from './pages/AppLayout';
+import Home from './pages/Home';
 import Library from './pages/Library';
 import Search from './pages/Search';
 import Playlists from './pages/Playlists';
-import ImportYouTube from './pages/ImportYouTube';
+import Import from './pages/Import';
 import Settings from './pages/Settings';
 import SpotifyCallback from './pages/SpotifyCallback';
 import YouTubeCallback from './pages/YouTubeCallback';
@@ -49,11 +50,13 @@ export default function App() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Library />} />
+        <Route index element={<Home />} />
         <Route path="library" element={<Library />} />
         <Route path="search" element={<Search />} />
         <Route path="playlists" element={<Playlists />} />
-        <Route path="import/youtube" element={<ImportYouTube />} />
+        <Route path="import" element={<Import />} />
+        <Route path="import/youtube" element={<Import />} />
+        <Route path="import/spotify" element={<Import />} />
         <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>

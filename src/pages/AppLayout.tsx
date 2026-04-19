@@ -15,7 +15,7 @@ const navItems = [
   { to: '/app/search', icon: Search, label: 'Search' },
   { to: '/app/library', icon: Library, label: 'Library' },
   { to: '/app/playlists', icon: ListMusic, label: 'Playlists' },
-  { to: '/app/import/youtube', icon: Download, label: 'Import' },
+  { to: '/app/import', icon: Download, label: 'Import' },
 ];
 
 /** Detect mobile via JS so we only render ONE set of embeds (never two). */

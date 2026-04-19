@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Search as SearchIcon, Play, Pause, Plus, Loader2,
-  ExternalLink, Music, Youtube, Lock, Crown, ListMusic,
+  ExternalLink, Music, Youtube, Lock, Crown, ListMusic, Download,
 } from 'lucide-react';
 import { usePlayer } from '../lib/player';
 import type { PlayerTrack } from '../lib/player';
@@ -250,6 +251,20 @@ function ResultCard({
             <ExternalLink className="w-4 h-4" />
           </a>
 
+          {/* Podcast download button */}
+          {result.source_platform === 'podcast' && (result.stream_url || result.preview_url) && (
+            <a
+              href={result.stream_url || result.preview_url || ''}
+              download
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 rounded-lg text-ash hover:text-pearl hover:bg-graphite transition"
+              title="Download episode for offline listening"
+            >
+              <Download className="w-4 h-4" />
+            </a>
+          )}
+
           <button
             onClick={() => setShowPlaylistModal(true)}
             className="p-2 rounded-lg text-ash hover:text-pearl hover:bg-graphite transition"
@@ -301,7 +316,8 @@ const VISIBLE_SOURCES: SourcePlatform[] = PHASE_1_SOURCES;
 
 // ── Main Search Page ────────────────────────────────────────────────────
 export default function Search() {
-  const [query, setQuery] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [query, setQuery] = useState(searchParams.get('q') || '');
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<UnifiedResult[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
@@ -319,22 +335,23 @@ export default function Search() {
     })();
   }, []);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!query.trim()) return;
+  // Core search runner — callable from either the form submit or a URL param change
+  const runSearch = async (q: string) => {
+    const trimmed = q.trim();
+    if (!trimmed) return;
     setSearching(true);
     setHasSearched(true);
     setError(null);
 
     try {
-      const data = await searchAll(query.trim(), VISIBLE_SOURCES, 25);
+      const data = await searchAll(trimmed, VISIBLE_SOURCES, 25);
       setResults(data.results);
       setStatus(data.status);
       setSourceErrors(data.errors);
 
       // B3: log search event (fire-and-forget)
       logB3Event('search.performed', {
-        query: query.trim(),
+        query: trimmed,
         result_count: data.results.length,
         sources: VISIBLE_SOURCES,
       });
@@ -344,6 +361,22 @@ export default function Search() {
       setResults([]);
     }
     setSearching(false);
+  };
+
+  // If we land on /app/search?q=... (e.g. from Home's "Try this" chips), auto-run the search.
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q && q !== query) setQuery(q);
+    if (q && !hasSearched) runSearch(q);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!query.trim()) return;
+    // Keep URL in sync so searches are shareable / bookmarkable
+    setSearchParams({ q: query.trim() }, { replace: true });
+    await runSearch(query);
   };
 
   const handleConnectSpotify = async () => {
@@ -365,7 +398,7 @@ export default function Search() {
   return (
     <div className="max-w-5xl">
       <h1 className="font-display font-black text-3xl text-pearl mb-2" style={{ letterSpacing: '-0.03em' }}>
-        Mix everything.
+        Find anything.
       </h1>
       <p className="text-sm text-silver mb-6">
         Search across YouTube, Spotify, SoundCloud, Apple Music, and Podcasts — all in one feed.
