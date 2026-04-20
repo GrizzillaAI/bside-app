@@ -105,11 +105,9 @@ export default function CassetteDeck({ embedBlock, compact = false }: CassetteDe
   const progress = duration > 0 ? currentTime / duration : 0;
 
   // Sizing based on compact vs full
+  // Real cassette: 102mm × 64mm = ratio 1.594:1
+  const CASSETTE_RATIO = '102 / 64';
   const pad = compact ? 12 : 40;
-  const reelSize = compact ? 44 : 68;
-  const cassH = compact ? 100 : 150;
-  const leftWound = (compact ? 28 : 42) + progress * (compact ? 14 : 24);
-  const rightWound = (compact ? 42 : 66) - progress * (compact ? 14 : 24);
   const btnH = compact ? 62 : 92;
   const keyH = compact ? 36 : 52;
   const edgeH = compact ? 10 : 16;
@@ -158,12 +156,12 @@ export default function CassetteDeck({ embedBlock, compact = false }: CassetteDe
         position: 'relative',
         zIndex: 5,
       }}>
-        {/* Cassette body — constrained aspect ratio */}
+        {/* Cassette body — real cassette ratio 102mm × 64mm */}
         <div style={{
           width: '100%',
-          maxWidth: compact ? 400 : 680,
+          maxWidth: compact ? 340 : 520,
+          aspectRatio: CASSETTE_RATIO,
           margin: '0 auto',
-          height: cassH,
           position: 'relative',
           background: 'linear-gradient(180deg,#1C1C36 0%,#161632 40%,#12122A 100%)',
           border: '1px solid #2A2A48',
@@ -173,76 +171,74 @@ export default function CassetteDeck({ embedBlock, compact = false }: CassetteDe
           {/* Corner screws */}
           {!compact && (
             <>
-              <div style={{ ...s.screw, top: 7, left: 10 }} />
-              <div style={{ ...s.screw, top: 7, right: 10 }} />
-              <div style={{ ...s.screw, bottom: 7, left: 10 }} />
-              <div style={{ ...s.screw, bottom: 7, right: 10 }} />
+              <div style={{ ...s.screw, top: '5%', left: '2.5%' }} />
+              <div style={{ ...s.screw, top: '5%', right: '2.5%' }} />
+              <div style={{ ...s.screw, bottom: '5%', left: '2.5%' }} />
+              <div style={{ ...s.screw, bottom: '5%', right: '2.5%' }} />
             </>
           )}
 
-          {/* Label strip */}
+          {/* Label strip — top 22% of cassette */}
           <div style={{
-            position: 'absolute', top: compact ? 4 : 7, left: compact ? 12 : 24, right: compact ? 12 : 24,
-            height: compact ? 24 : 34,
+            position: 'absolute', top: '5%', left: '6%', right: '6%', height: '22%',
             background: 'linear-gradient(180deg,rgba(255,45,135,.08) 0%,rgba(255,45,135,.03) 100%)',
-            border: '1px solid rgba(255,45,135,.12)',
-            borderRadius: compact ? 3 : 4,
-            display: 'flex', alignItems: 'center', padding: compact ? '0 8px' : '0 14px', gap: compact ? 4 : 8, zIndex: 3,
+            border: '1px solid rgba(255,45,135,.12)', borderRadius: 4,
+            display: 'flex', alignItems: 'center', padding: '0 10px', gap: 8, zIndex: 3,
           }}>
-            <span style={{ fontSize: compact ? 6 : 7.5, fontFamily: '"Archivo Black", sans-serif', textTransform: 'uppercase' as const, letterSpacing: '.16em', color: 'rgba(255,45,135,.5)', whiteSpace: 'nowrap' as const }}>MIXD</span>
-            <div style={{ flex: 1, height: 1, background: 'rgba(255,45,135,.12)' }} />
-            <span style={{ fontSize: compact ? 6 : 7.5, fontFamily: '"Archivo Black", sans-serif', textTransform: 'uppercase' as const, letterSpacing: '.16em', color: 'rgba(255,45,135,.5)', whiteSpace: 'nowrap' as const }}>Side A</span>
+            <span style={s.labelText}>MIXD</span>
+            <div style={s.labelLine} />
+            <span style={s.labelText}>Side A</span>
             {!compact && (
               <>
-                <div style={{ flex: 1, height: 1, background: 'rgba(255,45,135,.12)' }} />
-                <span style={{ fontSize: 7.5, fontFamily: '"Archivo Black", sans-serif', textTransform: 'uppercase' as const, letterSpacing: '.16em', color: 'rgba(255,45,135,.5)', whiteSpace: 'nowrap' as const }}>CrO₂ 90</span>
+                <div style={s.labelLine} />
+                <span style={s.labelText}>CrO₂ 90</span>
               </>
             )}
           </div>
 
-          {/* Tape window oval */}
+          {/* Tape window oval — bottom 60% of cassette */}
           <div style={{
-            position: 'absolute', top: compact ? 30 : 46, left: compact ? 16 : 28, right: compact ? 16 : 28, bottom: compact ? 6 : 10,
+            position: 'absolute', top: '30%', left: '7%', right: '7%', bottom: '6%',
             background: 'rgba(3,3,14,.7)', border: '1px solid rgba(255,45,135,.05)',
-            borderRadius: compact ? 24 : 36,
+            borderRadius: '40%',
             display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
           }}>
             {/* Ribbon */}
-            <div style={{ position: 'absolute', top: '50%', left: compact ? 12 : 22, right: compact ? 12 : 22, height: compact ? 6 : 10, transform: 'translateY(-50%)', zIndex: 0, background: 'rgba(255,45,135,.04)', borderTop: '1px solid rgba(255,45,135,.09)', borderBottom: '1px solid rgba(255,45,135,.05)' }} />
+            <div style={{ position: 'absolute', top: '50%', left: '8%', right: '8%', height: '14%', transform: 'translateY(-50%)', zIndex: 0, background: 'rgba(255,45,135,.04)', borderTop: '1px solid rgba(255,45,135,.09)', borderBottom: '1px solid rgba(255,45,135,.05)' }} />
 
             {/* Guide posts — desktop only */}
             {!compact && (
               <>
-                <div style={{ ...s.guidePost, left: 12 }} />
-                <div style={{ ...s.guidePost, left: 64 }} />
-                <div style={{ ...s.guidePost, right: 64 }} />
-                <div style={{ ...s.guidePost, right: 12 }} />
+                <div style={{ ...s.guidePost, left: '4%' }} />
+                <div style={{ ...s.guidePost, left: '22%' }} />
+                <div style={{ ...s.guidePost, right: '22%' }} />
+                <div style={{ ...s.guidePost, right: '4%' }} />
               </>
             )}
 
-            {/* Left reel */}
-            <div style={{ position: 'relative', zIndex: 1, marginRight: 'auto', marginLeft: compact ? 16 : 40 }}>
-              <div style={{
-                width: reelSize, height: reelSize, borderRadius: '50%',
+            {/* Left reel — sized relative to oval height */}
+            <div style={{ position: 'relative', zIndex: 1, marginRight: 'auto', marginLeft: '12%' }}>
+              <div className="cassette-reel" style={{
+                width: compact ? 44 : 68, height: compact ? 44 : 68, borderRadius: '50%',
                 position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 animation: isPlaying ? 'cassette-spin 2.4s linear infinite' : 'none',
               }}>
-                <div style={{ position: 'absolute', borderRadius: '50%', background: 'repeating-radial-gradient(circle,rgba(255,45,135,.02) 0px,rgba(255,45,135,.05) 1px,rgba(255,45,135,.02) 2.5px)', border: '1px solid rgba(255,45,135,.07)', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: leftWound, height: leftWound }} />
+                <div style={{ position: 'absolute', borderRadius: '50%', background: 'repeating-radial-gradient(circle,rgba(255,45,135,.02) 0px,rgba(255,45,135,.05) 1px,rgba(255,45,135,.02) 2.5px)', border: '1px solid rgba(255,45,135,.07)', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: (compact ? 28 : 42) + progress * (compact ? 14 : 24), height: (compact ? 28 : 42) + progress * (compact ? 14 : 24) }} />
                 <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '2px solid rgba(60,60,96,.45)', boxShadow: 'inset 0 0 6px rgba(0,0,0,.35)' }} />
-                <Hub size={compact ? 20 : 28} />
+                <Hub size={compact ? 18 : 28} />
               </div>
             </div>
 
             {/* Right reel */}
-            <div style={{ position: 'relative', zIndex: 1, marginLeft: 'auto', marginRight: compact ? 16 : 40 }}>
-              <div style={{
-                width: reelSize, height: reelSize, borderRadius: '50%',
+            <div style={{ position: 'relative', zIndex: 1, marginLeft: 'auto', marginRight: '12%' }}>
+              <div className="cassette-reel" style={{
+                width: compact ? 44 : 68, height: compact ? 44 : 68, borderRadius: '50%',
                 position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 animation: isPlaying ? 'cassette-spin 1.6s linear infinite' : 'none',
               }}>
-                <div style={{ position: 'absolute', borderRadius: '50%', background: 'repeating-radial-gradient(circle,rgba(255,45,135,.02) 0px,rgba(255,45,135,.05) 1px,rgba(255,45,135,.02) 2.5px)', border: '1px solid rgba(255,45,135,.07)', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: rightWound, height: rightWound }} />
+                <div style={{ position: 'absolute', borderRadius: '50%', background: 'repeating-radial-gradient(circle,rgba(255,45,135,.02) 0px,rgba(255,45,135,.05) 1px,rgba(255,45,135,.02) 2.5px)', border: '1px solid rgba(255,45,135,.07)', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: (compact ? 42 : 66) - progress * (compact ? 14 : 24), height: (compact ? 42 : 66) - progress * (compact ? 14 : 24) }} />
                 <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '2px solid rgba(60,60,96,.45)', boxShadow: 'inset 0 0 6px rgba(0,0,0,.35)' }} />
-                <Hub size={compact ? 20 : 28} />
+                <Hub size={compact ? 18 : 28} />
               </div>
             </div>
 
@@ -504,6 +500,14 @@ const s: Record<string, CSSProperties> = {
     width: 3, flexShrink: 0,
     background: 'linear-gradient(180deg,#0C0C1A 0%,#060612 50%,#0C0C1A 100%)',
     borderLeft: '1px solid #1A1A30', borderRight: '1px solid #1A1A30',
+  },
+  labelText: {
+    fontSize: 8, fontFamily: '"Archivo Black", sans-serif',
+    letterSpacing: '.12em', textTransform: 'uppercase' as const,
+    color: 'rgba(255,45,135,.35)', whiteSpace: 'nowrap' as const, flexShrink: 0,
+  },
+  labelLine: {
+    flex: 1, height: 1, background: 'rgba(255,45,135,.08)',
   },
 };
 
