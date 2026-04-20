@@ -146,15 +146,9 @@ export default function AppLayout() {
             </div>
           </div>
 
-          {/* ── Cassette Deck + YouTube embed ── */}
+          {/* ── Cassette Deck (YouTube renders inside tape window) ── */}
           <div className="flex-1 flex flex-col justify-center min-h-0 px-1">
-            {/* YouTube embed — visible above cassette when active (ToS compliant) */}
-            {youtubeBlock && (
-              <div className="px-3 pb-2">
-                {youtubeBlock}
-              </div>
-            )}
-            <CassetteDeck embedBlock={hiddenEmbedBlock} compact={false} />
+            <CassetteDeck embedBlock={hiddenEmbedBlock} youtubeBlock={youtubeBlock} compact={false} />
           </div>
 
           {/* Bottom: Premium + user */}
@@ -279,15 +273,8 @@ export default function AppLayout() {
         </div>
       )}
 
-      {/* YouTube embed — visible above cassette on mobile (ToS compliant) */}
-      {youtubeBlock && (
-        <div className="px-3 pb-1 shrink-0">
-          {youtubeBlock}
-        </div>
-      )}
-
-      {/* Cassette Deck — mobile compact, cassette body collapsible */}
-      <CassetteDeck embedBlock={hiddenEmbedBlock} compact={true} />
+      {/* Cassette Deck — mobile compact, cassette body collapsible, YouTube inside tape window */}
+      <CassetteDeck embedBlock={hiddenEmbedBlock} youtubeBlock={youtubeBlock} compact={true} />
 
       {/* Bottom tab bar */}
       <nav className="flex items-center bg-void border-t border-slate shrink-0 safe-bottom">

@@ -88,12 +88,13 @@ function clickSound() {
 // ── Component ────────────────────────────────────────────────────────────
 interface CassetteDeckProps {
   embedBlock: ReactNode;
+  youtubeBlock?: ReactNode; // visible YouTube embed (rendered inside tape window)
   compact?: boolean; // mobile compact layout
 }
 
 type LatchedButton = 'play' | 'pause' | 'stop' | null;
 
-export default function CassetteDeck({ embedBlock, compact = false }: CassetteDeckProps) {
+export default function CassetteDeck({ embedBlock, youtubeBlock, compact = false }: CassetteDeckProps) {
   const {
     currentTrack, isPlaying, currentTime, duration,
     seek, skipNext, skipPrev, pause, resume,
@@ -254,9 +255,16 @@ export default function CassetteDeck({ embedBlock, compact = false }: CassetteDe
               <div style={{
                 position: 'absolute', top: '30%', left: '7%', right: '7%', bottom: '6%',
                 background: 'rgba(3,3,14,.7)', border: '1px solid rgba(255,45,135,.05)',
-                borderRadius: '40%',
+                borderRadius: youtubeBlock ? '12%' : '40%',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                transition: 'border-radius .3s ease',
               }}>
+                {/* YouTube video inside tape window when active */}
+                {youtubeBlock && (
+                  <div className="yt-tape-window" style={{ position: 'absolute', inset: 0, zIndex: 5, borderRadius: 'inherit', overflow: 'hidden' }}>
+                    {youtubeBlock}
+                  </div>
+                )}
                 {/* Ribbon */}
                 <div style={{ position: 'absolute', top: '50%', left: '8%', right: '8%', height: '14%', transform: 'translateY(-50%)', zIndex: 0, background: 'rgba(255,45,135,.04)', borderTop: '1px solid rgba(255,45,135,.09)', borderBottom: '1px solid rgba(255,45,135,.05)' }} />
 
@@ -318,21 +326,25 @@ export default function CassetteDeck({ embedBlock, compact = false }: CassetteDe
       {/* ── Now playing info ── */}
       <div style={{
         padding: `${compact ? 4 : 8}px ${pad}px ${compact ? 2 : 4}px`,
-        display: 'flex', alignItems: 'center', gap: compact ? 6 : 8, minWidth: 0,
+        display: 'flex', alignItems: 'center', gap: compact ? 6 : 8, minWidth: 0, overflow: 'hidden',
       }}>
-        <span style={{ fontSize: compact ? 11 : 12, fontWeight: 700, color: '#EDEDF3', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis', letterSpacing: '-.01em', minWidth: 0 }}>
-          {currentTrack?.title ?? 'No track loaded'}
-        </span>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: compact ? 4 : 6, overflow: 'hidden' }}>
+          <span style={{ fontSize: compact ? 11 : 12, fontWeight: 700, color: '#EDEDF3', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis', letterSpacing: '-.01em', minWidth: 0, flexShrink: 1 }}>
+            {currentTrack?.title ?? 'No track loaded'}
+          </span>
+          {currentTrack && (
+            <>
+              <span style={{ width: 3, height: 3, borderRadius: '50%', background: '#5E5E7A', flexShrink: 0 }} />
+              <span style={{ fontSize: compact ? 10 : 11, color: '#A0A0B8', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, flexShrink: 1 }}>
+                {currentTrack.artist}
+              </span>
+            </>
+          )}
+        </div>
         {currentTrack && (
-          <>
-            <span style={{ width: 3, height: 3, borderRadius: '50%', background: '#5E5E7A', flexShrink: 0 }} />
-            <span style={{ fontSize: compact ? 10 : 11, color: '#A0A0B8', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
-              {currentTrack.artist}
-            </span>
-            <span style={{ fontSize: 10, color: '#5E5E7A', fontFamily: '"JetBrains Mono", monospace', whiteSpace: 'nowrap' as const, flexShrink: 0, marginLeft: 'auto' }}>
-              {formatTime(currentTime)} / {formatTime(duration)}
-            </span>
-          </>
+          <span style={{ fontSize: 10, color: '#5E5E7A', fontFamily: '"JetBrains Mono", monospace', whiteSpace: 'nowrap' as const, flexShrink: 0 }}>
+            {formatTime(currentTime)} / {formatTime(duration)}
+          </span>
         )}
       </div>
 
@@ -396,6 +408,17 @@ export default function CassetteDeck({ embedBlock, compact = false }: CassetteDe
       <style>{`
         @keyframes cassette-spin {
           to { transform: rotate(360deg); }
+        }
+        /* Override YouTubeEmbed sizing when rendered inside tape window */
+        .yt-tape-window > div {
+          width: 100% !important;
+          height: 100% !important;
+        }
+        .yt-tape-window > div > div {
+          width: 100% !important;
+          height: 100% !important;
+          position: absolute !important;
+          inset: 0 !important;
         }
       `}</style>
     </div>

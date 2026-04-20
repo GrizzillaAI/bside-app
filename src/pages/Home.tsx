@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Play, Pause, Music, Search as SearchIcon, Sparkles, ListMusic, ArrowRight } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { usePlayer, formatTime } from '../lib/player';
-import { extractAudio } from '../lib/api';
 import { supabase } from '../lib/supabase';
 import { Button, Chip, EmptyState, PlatformIcon, PLATFORM_LABELS } from '../components/ui';
 import type { PlatformKey } from '../components/ui';
@@ -46,7 +45,7 @@ const CAPTION = 'text-xs uppercase tracking-wider font-semibold';
 export default function Home() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { play, currentTrack, isPlaying, togglePlayPause } = usePlayer();
+  const { play, currentTrack, isPlaying, togglePlayPause, replaceQueue } = usePlayer();
   const [recent, setRecent] = useState<HomeTrack[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -82,18 +81,38 @@ export default function Home() {
       return;
     }
     try {
-      const result = await extractAudio(t.source_url);
+      let audioUrl = '';
+      if (t.source_platform === 'spotify' && t.source_id) {
+        audioUrl = `spotify:track:${t.source_id}`;
+      }
       play({
         id: t.id,
         title: t.title,
         artist: t.artist || 'Unknown artist',
         thumbnail_url: t.thumbnail_url || '',
-        audio_url: result.audio_url,
+        audio_url: audioUrl,
         duration_seconds: t.duration_seconds || 0,
         source_platform: t.source_platform,
         source_id: t.source_id || '',
         source_url: t.source_url,
       });
+
+      // Populate queue with remaining recent tracks for skip support
+      const idx = recent.findIndex((r) => r.id === t.id);
+      if (idx >= 0 && idx < recent.length - 1) {
+        const remaining = recent.slice(idx + 1).map((r) => ({
+          id: r.id,
+          title: r.title,
+          artist: r.artist || 'Unknown artist',
+          thumbnail_url: r.thumbnail_url || '',
+          audio_url: r.source_platform === 'spotify' && r.source_id ? `spotify:track:${r.source_id}` : '',
+          duration_seconds: r.duration_seconds || 0,
+          source_platform: r.source_platform,
+          source_id: r.source_id || '',
+          source_url: r.source_url,
+        }));
+        replaceQueue(remaining);
+      }
     } catch (e) {
       console.error('Playback failed:', e);
     }

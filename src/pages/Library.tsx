@@ -48,7 +48,7 @@ interface LibraryItem {
 }
 
 export default function Library() {
-  const { play, currentTrack, isPlaying, togglePlayPause } = usePlayer();
+  const { play, currentTrack, isPlaying, togglePlayPause, replaceQueue } = usePlayer();
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [extractError, setExtractError] = useState<string | null>(null);
@@ -273,6 +273,30 @@ export default function Library() {
       source_id: t.source_id || '',
       source_url: t.source_url,
     });
+
+    // Populate the queue with remaining tracks so skip buttons work
+    const idx = displayTracks.findIndex((dt) => dt.track.id === t.id);
+    if (idx >= 0 && idx < displayTracks.length - 1) {
+      const remaining = displayTracks.slice(idx + 1).map((dt) => {
+        const tr = dt.track;
+        let aUrl = '';
+        if (tr.source_platform === 'spotify' && tr.source_id) {
+          aUrl = `spotify:track:${tr.source_id}`;
+        }
+        return {
+          id: tr.id,
+          title: tr.title,
+          artist: tr.artist || 'Unknown Artist',
+          thumbnail_url: tr.thumbnail_url || '',
+          audio_url: aUrl,
+          duration_seconds: tr.duration_seconds || 0,
+          source_platform: tr.source_platform,
+          source_id: tr.source_id || '',
+          source_url: tr.source_url,
+        } as PlayerTrack;
+      });
+      replaceQueue(remaining);
+    }
   };
 
   const handleRemove = async (libraryTrackId: string) => {
