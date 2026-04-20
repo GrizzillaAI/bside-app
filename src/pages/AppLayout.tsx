@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Home, Search, Library, ListMusic, Download, Settings, Music, Play, Pause, SkipBack, SkipForward, Crown, LogOut, Menu, X } from 'lucide-react';
+import { Home, Search, Library, ListMusic, Download, Settings, Music, Crown, LogOut, Menu, X } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { usePlayer } from '../lib/player';
 import { LogoMark, Wordmark } from '../components/Logo';
@@ -38,8 +38,7 @@ export default function AppLayout() {
   const isMobile = useIsMobile();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const {
-    currentTrack, isPlaying, currentTime, duration, volume, playbackError,
-    togglePlayPause, seek, skipNext, skipPrev,
+    currentTrack, isPlaying, volume, playbackError,
     youtubeVideoId, onYouTubeStateChange, onYouTubeTimeUpdate, onYouTubeReady, youtubeRef,
     soundcloudTrackUrl, onSoundCloudStateChange, onSoundCloudTimeUpdate, onSoundCloudReady, soundcloudRef,
     tiktokVideoId, onTikTokStateChange, onTikTokTimeUpdate, onTikTokReady, tiktokRef,
@@ -266,66 +265,8 @@ export default function AppLayout() {
           </div>
         )}
 
-        {/* ── Player bar — ONE version, adapts via isMobile ── */}
-        {isMobile ? (
-          /* ── Mobile compact player ── */
-          <div className="bg-void border-t border-slate shrink-0">
-            <div className="flex items-center gap-3 px-3 py-2">
-              {/* Single embed instance */}
-              <div className="w-10 h-10 shrink-0">
-                {embedBlock}
-              </div>
-
-              {/* Track info */}
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium truncate text-pearl">
-                  {currentTrack?.title ?? 'No track playing'}
-                </p>
-                <p className="text-[10px] text-ash truncate">
-                  {currentTrack?.artist ?? 'Search or paste a link'}
-                </p>
-              </div>
-
-              {/* Compact controls */}
-              <div className="flex items-center gap-1 shrink-0">
-                <button onClick={skipPrev} className="text-ash hover:text-pearl transition p-1.5">
-                  <SkipBack className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={togglePlayPause}
-                  disabled={!currentTrack}
-                  className="w-9 h-9 rounded-full bg-pink flex items-center justify-center transition disabled:opacity-40"
-                >
-                  {isPlaying
-                    ? <Pause className="w-4 h-4 text-white" />
-                    : <Play className="w-4 h-4 text-white ml-0.5" />
-                  }
-                </button>
-                <button onClick={skipNext} className="text-ash hover:text-pearl transition p-1.5">
-                  <SkipForward className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Thin progress bar */}
-            {currentTrack && (
-              <div className="px-3 pb-1">
-                <input
-                  type="range"
-                  min="0"
-                  max={duration || 100}
-                  value={currentTime}
-                  onChange={(e) => seek(Number(e.target.value))}
-                  className="w-full h-1"
-                  style={{ accentColor: '#FF2D87' }}
-                />
-              </div>
-            )}
-          </div>
-        ) : (
-          /* ── Desktop: Retro Cassette Deck player ── */
-          <CassetteDeck embedBlock={embedBlock} />
-        )}
+        {/* ── Cassette Deck Player — responsive ── */}
+        <CassetteDeck embedBlock={embedBlock} compact={isMobile} />
 
         {/* ── Mobile bottom tab bar ── */}
         {isMobile && (
