@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Home, Search, Library, ListMusic, Download, Settings, Music, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Crown, LogOut, Menu, X } from 'lucide-react';
+import { Home, Search, Library, ListMusic, Download, Settings, Music, Play, Pause, SkipBack, SkipForward, Crown, LogOut, Menu, X } from 'lucide-react';
 import { useAuth } from '../lib/auth';
-import { usePlayer, formatTime } from '../lib/player';
+import { usePlayer } from '../lib/player';
 import { LogoMark, Wordmark } from '../components/Logo';
 import YouTubeEmbed from '../components/YouTubeEmbed';
 import SoundCloudEmbed from '../components/SoundCloudEmbed';
 import TikTokEmbed from '../components/TikTokEmbed';
 import BandcampEmbed from '../components/BandcampEmbed';
-import TrackReactions from '../components/TrackReactions';
+// TrackReactions now rendered inside CassetteDeck
+import CassetteDeck from '../components/CassetteDeck';
 
 const navItems = [
   { to: '/app', icon: Home, label: 'Home', end: true },
@@ -38,7 +39,7 @@ export default function AppLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const {
     currentTrack, isPlaying, currentTime, duration, volume, playbackError,
-    togglePlayPause, seek, setVolume, skipNext, skipPrev,
+    togglePlayPause, seek, skipNext, skipPrev,
     youtubeVideoId, onYouTubeStateChange, onYouTubeTimeUpdate, onYouTubeReady, youtubeRef,
     soundcloudTrackUrl, onSoundCloudStateChange, onSoundCloudTimeUpdate, onSoundCloudReady, soundcloudRef,
     tiktokVideoId, onTikTokStateChange, onTikTokTimeUpdate, onTikTokReady, tiktokRef,
@@ -322,77 +323,8 @@ export default function AppLayout() {
             )}
           </div>
         ) : (
-          /* ── Desktop full player bar ── */
-          <div className="h-20 bg-void border-t border-slate px-6 flex items-center gap-6 shrink-0">
-            {/* Track info + single embed instance */}
-            <div className="flex items-center gap-3 w-64 shrink-0">
-              {embedBlock}
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium truncate text-pearl">
-                  {currentTrack?.title ?? 'No track playing'}
-                </p>
-                <p className="text-xs text-ash truncate">
-                  {currentTrack?.artist ?? 'Search or paste a link to start'}
-                </p>
-              </div>
-              <TrackReactions track={currentTrack} />
-            </div>
-
-            {/* Controls */}
-            <div className="flex-1 flex flex-col items-center gap-2">
-              <div className="flex items-center gap-4">
-                <button onClick={skipPrev} className="text-ash hover:text-pearl transition">
-                  <SkipBack className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={togglePlayPause}
-                  disabled={!currentTrack}
-                  className="w-10 h-10 rounded-full bg-pink flex items-center justify-center hover:bg-pink-400 hover:scale-105 transition disabled:opacity-40"
-                >
-                  {isPlaying
-                    ? <Pause className="w-5 h-5 text-white" />
-                    : <Play className="w-5 h-5 text-white ml-0.5" />
-                  }
-                </button>
-                <button onClick={skipNext} className="text-ash hover:text-pearl transition">
-                  <SkipForward className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="flex items-center gap-3 w-full max-w-md">
-                <span className="text-xs text-ash w-10 text-right font-mono">{formatTime(currentTime)}</span>
-                <input
-                  type="range"
-                  min="0"
-                  max={duration || 100}
-                  value={currentTime}
-                  onChange={(e) => seek(Number(e.target.value))}
-                  className="flex-1"
-                />
-                <span className="text-xs text-ash w-10 font-mono">{formatTime(duration)}</span>
-              </div>
-            </div>
-
-            {/* Volume */}
-            <div className="flex items-center gap-3 shrink-0">
-              <div className="flex items-center gap-2 w-36">
-                <button
-                  onClick={() => setVolume(volume > 0 ? 0 : 0.75)}
-                  className="text-ash hover:text-pearl transition"
-                >
-                  {volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                </button>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={volume}
-                  onChange={(e) => setVolume(Number(e.target.value))}
-                  className="flex-1"
-                />
-              </div>
-            </div>
-          </div>
+          /* ── Desktop: Retro Cassette Deck player ── */
+          <CassetteDeck embedBlock={embedBlock} />
         )}
 
         {/* ── Mobile bottom tab bar ── */}
