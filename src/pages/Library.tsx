@@ -460,15 +460,15 @@ export default function Library() {
                   <p className={`text-sm font-medium truncate ${isThis ? 'text-[#FF2D87]' : ''}`}>{t.title}</p>
                   <p className="text-xs text-[#5E5E7A] truncate">{t.artist || 'Unknown Artist'}</p>
                 </div>
-                <span className="text-xs font-medium text-[#FF2D87] bg-[#FF2D87]/10 px-2 py-1 rounded shrink-0">
+                <span className="hidden sm:inline text-xs font-medium text-[#FF2D87] bg-[#FF2D87]/10 px-2 py-1 rounded shrink-0">
                   {PLATFORM_LABELS[t.source_platform] || t.source_platform}
                 </span>
                 {t.duration_seconds && (
-                  <span className="text-xs text-[#5E5E7A] flex items-center gap-1 shrink-0">
+                  <span className="hidden sm:flex text-xs text-[#5E5E7A] items-center gap-1 shrink-0">
                     <Clock className="w-3 h-3" /> {formatTime(t.duration_seconds)}
                   </span>
                 )}
-                <span className="text-xs text-[#5E5E7A] shrink-0 w-24 text-right">{formatAdded(item.added_at)}</span>
+                <span className="hidden md:inline text-xs text-[#5E5E7A] shrink-0 w-24 text-right">{formatAdded(item.added_at)}</span>
                 {/* Podcast download button */}
                 {t.source_platform === 'podcast' && t.source_url && (
                   <a
@@ -476,7 +476,7 @@ export default function Library() {
                     download
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[#5E5E7A] hover:text-green-400 transition opacity-0 group-hover:opacity-100"
+                    className="text-[#5E5E7A] hover:text-green-400 transition sm:opacity-0 sm:group-hover:opacity-100"
                     title="Download episode for offline listening"
                   >
                     <Download className="w-4 h-4" />
@@ -492,14 +492,14 @@ export default function Library() {
                     thumbnail_url: t.thumbnail_url || '',
                     duration_seconds: t.duration_seconds,
                   })}
-                  className="text-[#5E5E7A] hover:text-[#FF2D87] transition opacity-0 group-hover:opacity-100"
+                  className="text-[#5E5E7A] hover:text-[#FF2D87] transition sm:opacity-0 sm:group-hover:opacity-100"
                   title="Add to playlist"
                 >
                   <ListMusic className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => handleRemove(item.id)}
-                  className="text-[#5E5E7A] hover:text-red-400 transition opacity-0 group-hover:opacity-100"
+                  className="text-[#5E5E7A] hover:text-red-400 transition sm:opacity-0 sm:group-hover:opacity-100"
                   title="Remove from library"
                 >
                   <Trash2 className="w-4 h-4" />

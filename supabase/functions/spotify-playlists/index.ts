@@ -145,6 +145,7 @@ serve(async (req) => {
         }
         const data = await resp.json();
         for (const item of data.items ?? []) {
+          if (!item) continue;
           playlists.push({
             id: item.id,
             title: item.name ?? 'Untitled',
@@ -174,7 +175,8 @@ serve(async (req) => {
         preview_url: string | null;
       }> = [];
 
-      let url: string | null = `https://api.spotify.com/v1/playlists/${playlist_id}/tracks?limit=100&fields=next,items(track(id,name,artists,album,duration_ms,external_urls,preview_url))`;
+      // NOTE: No fields filter — Spotify can reject complex field selectors
+      let url: string | null = `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlist_id)}/tracks?limit=100`;
       while (url) {
         const resp = await fetch(url, {
           headers: { Authorization: `Bearer ${accessToken}` },
@@ -186,8 +188,9 @@ serve(async (req) => {
         }
         const data = await resp.json();
         for (const entry of data.items ?? []) {
+          // Spotify can return null entries for removed/local-only tracks
+          if (!entry || !entry.track || !entry.track.id) continue;
           const track = entry.track;
-          if (!track || !track.id) continue; // Skip local files or removed tracks
           items.push({
             track_id: track.id,
             title: track.name ?? 'Unknown',
