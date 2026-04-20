@@ -12,7 +12,6 @@ import {
   beginSpotifyOAuth, getMySpotifyConnection, type SpotifyConnection,
 } from '../lib/spotify';
 import AddToPlaylistModal from '../components/AddToPlaylistModal';
-import type { TrackForPlaylist } from '../components/AddToPlaylistModal';
 
 // ── Platform metadata ───────────────────────────────────────────────────
 const PLATFORM_META: Record<SourcePlatform, { label: string; badge: string; accent: string }> = {
@@ -25,14 +24,34 @@ const PLATFORM_META: Record<SourcePlatform, { label: string; badge: string; acce
 };
 
 // ── Unified Result Card ─────────────────────────────────────────────────
+/** Convert a UnifiedResult to a PlayerTrack */
+function resultToPlayerTrack(r: UnifiedResult): PlayerTrack {
+  let audioUrl = '';
+  if (r.source_platform === 'spotify') audioUrl = `spotify:track:${r.source_id}`;
+  else if (r.source_platform === 'podcast') audioUrl = r.stream_url || r.preview_url || '';
+  else if (r.source_platform === 'applemusic') audioUrl = r.preview_url || '';
+  return {
+    title: r.title,
+    artist: r.artist,
+    thumbnail_url: r.thumbnail_url,
+    audio_url: audioUrl,
+    duration_seconds: r.duration_seconds,
+    source_platform: r.source_platform,
+    source_id: r.source_id,
+    source_url: r.external_url,
+  };
+}
+
 function ResultCard({
   result,
   spotifyConnection,
+  allResults,
 }: {
   result: UnifiedResult;
   spotifyConnection: SpotifyConnection | null;
+  allResults: UnifiedResult[];
 }) {
-  const { play, currentTrack, isPlaying, togglePlayPause } = usePlayer();
+  const { play, currentTrack, isPlaying, togglePlayPause, replaceQueue } = usePlayer();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -62,92 +81,22 @@ function ResultCard({
     setError(null);
     setLoading(true);
     try {
-      if (result.source_platform === 'spotify') {
-        // Full-track playback via Web Playback SDK. Audio URL is the Spotify URI.
-        const track: PlayerTrack = {
-          title: result.title,
-          artist: result.artist,
-          thumbnail_url: result.thumbnail_url,
-          audio_url: `spotify:track:${result.source_id}`,
-          duration_seconds: result.duration_seconds,
-          source_platform: 'spotify',
-          source_id: result.source_id,
-          source_url: result.external_url,
-        };
-        play(track);
-        setLoading(false);
-        return;
-      }
-
-      // SoundCloud: use Widget API (iframe) — pass permalink URL, no audio_url needed
-      if (result.source_platform === 'soundcloud') {
-        const track: PlayerTrack = {
-          title: result.title,
-          artist: result.artist,
-          thumbnail_url: result.thumbnail_url,
-          audio_url: '',  // SoundCloud Widget handles playback via iframe
-          duration_seconds: result.duration_seconds,
-          source_platform: 'soundcloud',
-          source_id: result.source_id,
-          source_url: result.external_url,
-        };
-        play(track);
-        setLoading(false);
-        return;
-      }
-
-      // Podcast: full episode playback via HTML5 audio (stream_url or preview_url)
-      if (result.source_platform === 'podcast') {
-        const audioSrc = result.stream_url || result.preview_url || '';
-        const track: PlayerTrack = {
-          title: result.title,
-          artist: result.artist,
-          thumbnail_url: result.thumbnail_url,
-          audio_url: audioSrc,
-          duration_seconds: result.duration_seconds,
-          source_platform: 'podcast',
-          source_id: result.source_id,
-          source_url: result.external_url,
-        };
-        play(track);
-        setLoading(false);
-        return;
-      }
-
-      // Apple Music: 30-second preview via HTML5 audio
-      if (result.source_platform === 'applemusic') {
-        const audioSrc = result.preview_url || '';
-        const track: PlayerTrack = {
-          title: result.title,
-          artist: result.artist,
-          thumbnail_url: result.thumbnail_url,
-          audio_url: audioSrc,
-          duration_seconds: result.duration_seconds,
-          source_platform: 'applemusic',
-          source_id: result.source_id,
-          source_url: result.external_url,
-        };
-        play(track);
-        setLoading(false);
-        return;
-      }
-
-      // YouTube: pass video ID directly — the YouTube IFrame embed handles playback
-      const track: PlayerTrack = {
-        title: result.title,
-        artist: result.artist,
-        thumbnail_url: result.thumbnail_url,
-        audio_url: '',  // YouTube doesn't use audio_url — the iframe plays the video
-        duration_seconds: result.duration_seconds,
-        source_platform: result.source_platform,
-        source_id: result.source_id,
-        source_url: result.external_url,
-      };
+      // Build the PlayerTrack using the shared converter and play it
+      const track = resultToPlayerTrack(result);
       play(track);
     } catch (e) {
       console.error('Playback failed:', e);
       setError((e as Error).message);
     }
+
+    // Populate queue with remaining search results for skip support
+    const idx = allResults.findIndex(
+      (r) => r.source_id === result.source_id && r.source_platform === result.source_platform,
+    );
+    if (idx >= 0 && idx < allResults.length - 1) {
+      replaceQueue(allResults.slice(idx + 1).map(resultToPlayerTrack));
+    }
+
     setLoading(false);
   };
 
@@ -515,6 +464,7 @@ export default function Search() {
               key={`${r.source_platform}-${r.source_id}`}
               result={r}
               spotifyConnection={spotifyConnection}
+              allResults={filteredResults}
             />
           ))}
         </div>

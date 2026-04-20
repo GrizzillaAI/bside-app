@@ -1,6 +1,7 @@
 // Import — Tabbed import page for YouTube and Spotify playlist import.
 
 import { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Youtube, Music } from 'lucide-react';
 import ImportYouTube from './ImportYouTube';
 import ImportSpotify from './ImportSpotify';
@@ -8,7 +9,9 @@ import ImportSpotify from './ImportSpotify';
 type ImportTab = 'youtube' | 'spotify';
 
 export default function Import() {
-  const [activeTab, setActiveTab] = useState<ImportTab>('youtube');
+  const location = useLocation();
+  const initialTab: ImportTab = location.pathname.includes('spotify') ? 'spotify' : 'youtube';
+  const [activeTab, setActiveTab] = useState<ImportTab>(initialTab);
 
   return (
     <div className="max-w-4xl">
