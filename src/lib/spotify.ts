@@ -361,9 +361,5 @@ export async function getSpotifyPlaylistItems(playlistId: string): Promise<Spoti
   });
   if (error) throw new Error(error.message);
   if (data?.error) throw new Error(data.error);
-  // TEMP DIAGNOSTIC: if items empty but we have diag info, throw with details
-  if ((!data?.items || data.items.length === 0) && data?._diag) {
-    throw new Error(`0 tracks returned. Debug: ${JSON.stringify(data._diag)}`);
-  }
   return data?.items ?? [];
 }

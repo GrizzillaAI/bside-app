@@ -151,7 +151,7 @@ serve(async (req) => {
             title: item.name ?? 'Untitled',
             description: item.description ?? '',
             thumbnail_url: item.images?.[0]?.url ?? '',
-            item_count: item.tracks?.total ?? 0,
+            item_count: item.tracks?.total ?? item.items?.total ?? 0,
             owner: item.owner?.display_name ?? '',
             is_public: item.public ?? false,
           });
@@ -179,10 +179,11 @@ serve(async (req) => {
       }> = [];
 
       // Helper to extract track items from response data
+      // Spotify may return track data as entry.track OR entry.item depending on API version
       function extractTracks(entries: any[]) {
         for (const entry of entries) {
-          if (!entry || !entry.track || !entry.track.id) continue;
-          const track = entry.track;
+          const track = entry?.track ?? entry?.item;
+          if (!track || !track.id) continue;
           items.push({
             track_id: track.id,
             title: track.name ?? 'Unknown',
@@ -204,20 +205,8 @@ serve(async (req) => {
 
       if (playlistResp.ok) {
         const playlist = await playlistResp.json();
-        const tracksObj = playlist.tracks;
-
-        // DIAGNOSTIC: return shape info so we can debug empty results
-        const diag = {
-          has_tracks_key: 'tracks' in playlist,
-          tracks_type: typeof playlist.tracks,
-          tracks_total: tracksObj?.total ?? 'N/A',
-          tracks_items_length: tracksObj?.items?.length ?? 0,
-          first_item_keys: tracksObj?.items?.[0] ? Object.keys(tracksObj.items[0]) : [],
-          first_item_track_keys: tracksObj?.items?.[0]?.track ? Object.keys(tracksObj.items[0].track) : [],
-          first_item_track_id: tracksObj?.items?.[0]?.track?.id ?? null,
-          first_item_track_name: tracksObj?.items?.[0]?.track?.name ?? null,
-          playlist_keys: Object.keys(playlist),
-        };
+        // Spotify returns tracks under "tracks" or "items" depending on API version
+        const tracksObj = playlist.tracks ?? playlist.items;
 
         if (tracksObj?.items) {
           extractTracks(tracksObj.items);
@@ -234,14 +223,7 @@ serve(async (req) => {
           }
         }
 
-        // If Spotify says there are tracks but we extracted 0, report diagnostic as error
-        if (items.length === 0 && (tracksObj?.total ?? 0) > 0) {
-          return json({
-            error: `Spotify returned ${tracksObj.total} tracks but extraction got 0. Diag: ${JSON.stringify(diag)}`,
-          });
-        }
-
-        return json({ items, _diag: diag });
+        return json({ items });
       }
 
       // Attempt 2: fall back to /playlists/{id}/tracks (in case the above fails differently)
