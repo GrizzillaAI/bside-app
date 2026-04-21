@@ -160,9 +160,9 @@ export default function AppLayout() {
             {user && (
               <div className="flex items-center gap-3 px-2 pt-2 border-t border-slate">
                 <div className="w-7 h-7 rounded-full bg-pink flex items-center justify-center text-xs font-bold shrink-0 text-white">
-                  {(user.email?.[0] ?? 'U').toUpperCase()}
+                  {(user.user_metadata?.username?.[0] ?? user.email?.[0] ?? 'U').toUpperCase()}
                 </div>
-                <span className="text-xs text-silver truncate flex-1">{user.email}</span>
+                <span className="text-xs text-silver truncate flex-1">{user.user_metadata?.username || user.email?.split('@')[0] || 'User'}</span>
                 <button onClick={handleSignOut} className="text-ash hover:text-pearl transition" title="Sign out">
                   <LogOut className="w-4 h-4" />
                 </button>
@@ -245,9 +245,9 @@ export default function AppLayout() {
               {user && (
                 <div className="flex items-center gap-3 px-2 pt-3 border-t border-slate">
                   <div className="w-8 h-8 rounded-full bg-pink flex items-center justify-center text-xs font-bold shrink-0 text-white">
-                    {(user.email?.[0] ?? 'U').toUpperCase()}
+                    {(user.user_metadata?.username?.[0] ?? user.email?.[0] ?? 'U').toUpperCase()}
                   </div>
-                  <span className="text-xs text-silver truncate flex-1">{user.email}</span>
+                  <span className="text-xs text-silver truncate flex-1">{user.user_metadata?.username || user.email?.split('@')[0] || 'User'}</span>
                   <button onClick={handleSignOut} className="text-ash hover:text-pearl transition" title="Sign out">
                     <LogOut className="w-4 h-4" />
                   </button>

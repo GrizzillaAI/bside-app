@@ -350,6 +350,7 @@ export async function getMySpotifyPlaylists(): Promise<SpotifyPlaylistSummary[]>
   });
   if (error) throw new Error(error.message);
   if (data?.needs_reconnect) throw new Error(data.error);
+  if (data?.error) throw new Error(data.error);
   return data?.playlists ?? [];
 }
 
@@ -359,5 +360,6 @@ export async function getSpotifyPlaylistItems(playlistId: string): Promise<Spoti
     body: { action: 'items', playlist_id: playlistId },
   });
   if (error) throw new Error(error.message);
+  if (data?.error) throw new Error(data.error);
   return data?.items ?? [];
 }

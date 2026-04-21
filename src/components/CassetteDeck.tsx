@@ -160,7 +160,8 @@ export default function CassetteDeck({ embedBlock, youtubeBlock, compact = false
   const latchEdge = compact ? 2 : 3;
 
   // Should we show the cassette visual?
-  const showCassette = compact ? cassetteExpanded : true;
+  // Auto-expand on mobile when YouTube is active (iframe must be visible to play)
+  const showCassette = compact ? (cassetteExpanded || !!youtubeBlock) : true;
 
   return (
     <div className="cassette-deck" style={{
@@ -175,8 +176,8 @@ export default function CassetteDeck({ embedBlock, youtubeBlock, compact = false
       overflow: 'hidden',
     }}>
 
-      {/* ── Mobile: expand/collapse toggle bar ── */}
-      {compact && (
+      {/* ── Mobile: expand/collapse toggle bar (hidden when YouTube forces expand) ── */}
+      {compact && !youtubeBlock && (
         <button
           onClick={() => setCassetteExpanded(!cassetteExpanded)}
           style={{
