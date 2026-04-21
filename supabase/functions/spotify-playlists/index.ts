@@ -163,7 +163,10 @@ serve(async (req) => {
     }
 
     if (action === 'items' && playlist_id) {
-      // Fetch all tracks in a playlist (paginated)
+      // Fetch all tracks in a playlist.
+      // Strategy: first try GET /playlists/{id} (full object with inline tracks),
+      // which may succeed where /playlists/{id}/tracks returns 403 in Spotify's
+      // development mode API restrictions.
       const items: Array<{
         track_id: string;
         title: string;
@@ -175,21 +178,9 @@ serve(async (req) => {
         preview_url: string | null;
       }> = [];
 
-      // NOTE: No fields filter — Spotify can reject complex field selectors
-      // market=from_token tells Spotify to use the user's home market for track availability
-      let url: string | null = `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlist_id)}/tracks?limit=100&market=from_token`;
-      while (url) {
-        const resp = await fetch(url, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        if (!resp.ok) {
-          const err = await resp.text();
-          console.error('Spotify playlist items API error:', resp.status, err);
-          return json({ error: 'Spotify API error', detail: err }, 502);
-        }
-        const data = await resp.json();
-        for (const entry of data.items ?? []) {
-          // Spotify can return null entries for removed/local-only tracks
+      // Helper to extract track items from response data
+      function extractTracks(entries: any[]) {
+        for (const entry of entries) {
           if (!entry || !entry.track || !entry.track.id) continue;
           const track = entry.track;
           items.push({
@@ -203,7 +194,80 @@ serve(async (req) => {
             preview_url: track.preview_url ?? null,
           });
         }
-        url = data.next ?? null;
+      }
+
+      // Attempt 1: GET /playlists/{id} — returns full playlist with inline tracks
+      const playlistResp = await fetch(
+        `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlist_id)}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+
+      if (playlistResp.ok) {
+        const playlist = await playlistResp.json();
+        const tracksObj = playlist.tracks;
+
+        // DIAGNOSTIC: return shape info so we can debug empty results
+        const diag = {
+          has_tracks_key: 'tracks' in playlist,
+          tracks_type: typeof playlist.tracks,
+          tracks_total: tracksObj?.total ?? 'N/A',
+          tracks_items_length: tracksObj?.items?.length ?? 0,
+          first_item_keys: tracksObj?.items?.[0] ? Object.keys(tracksObj.items[0]) : [],
+          first_item_track_keys: tracksObj?.items?.[0]?.track ? Object.keys(tracksObj.items[0].track) : [],
+          first_item_track_id: tracksObj?.items?.[0]?.track?.id ?? null,
+          first_item_track_name: tracksObj?.items?.[0]?.track?.name ?? null,
+          playlist_keys: Object.keys(playlist),
+        };
+
+        if (tracksObj?.items) {
+          extractTracks(tracksObj.items);
+          // Paginate if more tracks exist
+          let nextUrl: string | null = tracksObj.next ?? null;
+          while (nextUrl) {
+            const pageResp = await fetch(nextUrl, {
+              headers: { Authorization: `Bearer ${accessToken}` },
+            });
+            if (!pageResp.ok) break;
+            const pageData = await pageResp.json();
+            extractTracks(pageData.items ?? []);
+            nextUrl = pageData.next ?? null;
+          }
+        }
+
+        // If Spotify says there are tracks but we extracted 0, report diagnostic as error
+        if (items.length === 0 && (tracksObj?.total ?? 0) > 0) {
+          return json({
+            error: `Spotify returned ${tracksObj.total} tracks but extraction got 0. Diag: ${JSON.stringify(diag)}`,
+          });
+        }
+
+        return json({ items, _diag: diag });
+      }
+
+      // Attempt 2: fall back to /playlists/{id}/tracks (in case the above fails differently)
+      const tracksResp = await fetch(
+        `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlist_id)}/tracks?limit=100`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      if (!tracksResp.ok) {
+        const err = await tracksResp.text();
+        // Both approaches failed — report the error
+        const playlistErr = await playlistResp.text().catch(() => '');
+        return json({
+          error: `Spotify API error (${tracksResp.status}): ${err}. Playlist endpoint (${playlistResp.status}): ${playlistErr}`,
+        });
+      }
+      const tracksData = await tracksResp.json();
+      extractTracks(tracksData.items ?? []);
+      let nextUrl: string | null = tracksData.next ?? null;
+      while (nextUrl) {
+        const pageResp = await fetch(nextUrl, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (!pageResp.ok) break;
+        const pageData = await pageResp.json();
+        extractTracks(pageData.items ?? []);
+        nextUrl = pageData.next ?? null;
       }
 
       return json({ items });
