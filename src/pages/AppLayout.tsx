@@ -146,9 +146,9 @@ export default function AppLayout() {
             </div>
           </div>
 
-          {/* ── Cassette Deck (YouTube renders inside tape window) ── */}
-          <div className="flex-1 flex flex-col justify-center min-h-0 px-1">
-            <CassetteDeck embedBlock={hiddenEmbedBlock} youtubeBlock={youtubeBlock} compact={false} />
+          {/* ── Cassette Deck (pushed lower — YouTube PIP moved to content area) ── */}
+          <div className="flex-1 flex flex-col justify-end min-h-0 px-1 pb-2">
+            <CassetteDeck embedBlock={hiddenEmbedBlock} compact={false} />
           </div>
 
           {/* Bottom: Premium + user */}
@@ -178,9 +178,50 @@ export default function AppLayout() {
               {playbackError}
             </div>
           )}
-          <main className="flex-1 overflow-y-auto p-6">
+          <main className="flex-1 overflow-y-auto p-6 relative">
+            {/* ── Floating YouTube PIP (top-right, hover to enlarge) ── */}
+            {youtubeBlock && (
+              <div className="yt-pip-float" style={{
+                position: 'sticky', top: 0, float: 'right',
+                zIndex: 40, marginLeft: 16, marginBottom: 12,
+              }}>
+                <div className="yt-pip-container">
+                  {youtubeBlock}
+                </div>
+              </div>
+            )}
             <Outlet />
           </main>
+
+          {/* ── Banner Ad Slot (below content, never overlaps video) ── */}
+          <div className="shrink-0 border-t border-slate bg-void/60">
+            <div className="ad-banner" style={{
+              maxWidth: 728, margin: '0 auto', padding: '8px 16px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              minHeight: 60,
+            }}>
+              {/* Self-promo placeholder — swap to <ins class="adsbygoogle" ... /> for AdSense */}
+              <a
+                href="https://grizzillaconsulting.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '6px 16px', borderRadius: 8,
+                  background: 'linear-gradient(135deg, rgba(255,45,135,.08), rgba(168,255,120,.06))',
+                  border: '1px solid rgba(255,45,135,.12)',
+                  textDecoration: 'none', color: '#A0A0B8',
+                  fontSize: 12, transition: 'border-color .2s, color .2s',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(255,45,135,.3)'; e.currentTarget.style.color = '#EDEDF3'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,45,135,.12)'; e.currentTarget.style.color = '#A0A0B8'; }}
+              >
+                <span style={{ fontFamily: '"Archivo Black", sans-serif', color: '#FF2D87', fontSize: 13 }}>GRIZZILLA</span>
+                <span style={{ width: 1, height: 16, background: 'rgba(255,45,135,.15)' }} />
+                <span>Digital consulting for creators & brands</span>
+              </a>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -272,6 +313,28 @@ export default function AppLayout() {
           }
         </div>
       )}
+
+      {/* ── Mobile Banner Ad (above cassette, never overlaps video) ── */}
+      <div className="shrink-0 border-t border-slate bg-void/60">
+        <div style={{ maxWidth: 320, margin: '0 auto', padding: '6px 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 50 }}>
+          <a
+            href="https://grizzillaconsulting.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '5px 12px', borderRadius: 6,
+              background: 'linear-gradient(135deg, rgba(255,45,135,.08), rgba(168,255,120,.06))',
+              border: '1px solid rgba(255,45,135,.12)',
+              textDecoration: 'none', color: '#A0A0B8', fontSize: 11,
+            }}
+          >
+            <span style={{ fontFamily: '"Archivo Black", sans-serif', color: '#FF2D87', fontSize: 11 }}>GRIZZILLA</span>
+            <span style={{ width: 1, height: 14, background: 'rgba(255,45,135,.15)' }} />
+            <span>Digital consulting</span>
+          </a>
+        </div>
+      </div>
 
       {/* Cassette Deck — mobile compact, cassette body collapsible, YouTube inside tape window */}
       <CassetteDeck embedBlock={hiddenEmbedBlock} youtubeBlock={youtubeBlock} compact={true} />

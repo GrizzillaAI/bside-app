@@ -86,3 +86,34 @@ input[type="range"]::-moz-range-thumb {
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
+
+/* ── YouTube floating PIP (desktop content area) ── */
+.yt-pip-float {
+  width: 240px;
+  transition: width 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+.yt-pip-float:hover {
+  width: 480px;
+}
+.yt-pip-container {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 2px solid #2A2A46;
+  box-shadow: 0 8px 32px rgba(0,0,0,.6), 0 0 0 1px rgba(255,45,135,.08);
+  background: #07071A;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.yt-pip-float:hover .yt-pip-container {
+  border-color: rgba(255,45,135,.25);
+  box-shadow: 0 12px 48px rgba(0,0,0,.7), 0 0 24px rgba(255,45,135,.08);
+}
+.yt-pip-container > div {
+  width: 100% !important;
+  height: 100% !important;
+}
+.yt-pip-container > div > div {
+  width: 100% !important;
+  height: 100% !important;
+}

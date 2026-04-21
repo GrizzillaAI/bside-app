@@ -16,83 +16,107 @@ function getAudioCtx(): AudioContext {
 }
 
 function clickSound() {
-  // Synthesised cassette deck button press:
-  //  1. Initial sharp contact "tick" (high-freq transient, ~2ms)
-  //  2. Heavy mechanical body thud (low resonance ~80-100Hz, ~40ms)
-  //  3. Spring/latch settle rattle (filtered noise tail, ~60ms)
+  // Synthesised cassette deck button press — modelled on real tape player
+  // transport buttons (heavy plastic keys bottoming out on metal chassis).
+  //  1. Initial plastic-on-metal impact "clack" (broadband transient, ~4ms)
+  //  2. Chassis resonance thud (low ~55-75Hz body, ~80ms decay)
+  //  3. Latch engagement click (sharp mid-freq burst, ~3ms, delayed 6ms)
+  //  4. Mechanical settle (very short filtered rattle, ~35ms)
   const ctx = getAudioCtx();
   if (ctx.state === 'suspended') ctx.resume();
   const sr = ctx.sampleRate;
   const now = ctx.currentTime;
 
-  // ── Layer 1: Contact tick (sharp high-freq click) ──
-  const tickLen = Math.floor(sr * 0.003);
-  const tickBuf = ctx.createBuffer(1, tickLen, sr);
-  const tickD = tickBuf.getChannelData(0);
-  for (let i = 0; i < tickLen; i++) {
-    const env = Math.exp(-i / (tickLen * 0.15));
-    tickD[i] = (Math.random() * 2 - 1) * env;
+  // ── Layer 1: Plastic impact clack (broadband, plastic character) ──
+  const clackLen = Math.floor(sr * 0.005);
+  const clackBuf = ctx.createBuffer(1, clackLen, sr);
+  const clackD = clackBuf.getChannelData(0);
+  for (let i = 0; i < clackLen; i++) {
+    const t = i / sr;
+    // Sharp exponential decay with a resonant plastic ring
+    const env = Math.exp(-t * 1200);
+    const ring = Math.sin(2 * Math.PI * 4200 * t) * 0.3;
+    clackD[i] = ((Math.random() * 2 - 1) * 0.7 + ring) * env;
   }
-  const tickSrc = ctx.createBufferSource();
-  tickSrc.buffer = tickBuf;
-  const tickHp = ctx.createBiquadFilter();
-  tickHp.type = 'highpass'; tickHp.frequency.value = 3000;
-  const tickGain = ctx.createGain();
-  tickGain.gain.value = 0.5;
-  tickSrc.connect(tickHp).connect(tickGain).connect(ctx.destination);
-  tickSrc.start(now);
+  const clackSrc = ctx.createBufferSource();
+  clackSrc.buffer = clackBuf;
+  const clackBp = ctx.createBiquadFilter();
+  clackBp.type = 'bandpass'; clackBp.frequency.value = 2800; clackBp.Q.value = 0.8;
+  const clackGain = ctx.createGain();
+  clackGain.gain.value = 0.45;
+  clackSrc.connect(clackBp).connect(clackGain).connect(ctx.destination);
+  clackSrc.start(now);
 
-  // ── Layer 2: Mechanical body thud (low resonant thump) ──
-  const thudLen = Math.floor(sr * 0.045);
+  // ── Layer 2: Chassis body thud (deep, heavy, short) ──
+  const thudLen = Math.floor(sr * 0.08);
   const thudBuf = ctx.createBuffer(1, thudLen, sr);
   const thudD = thudBuf.getChannelData(0);
   for (let i = 0; i < thudLen; i++) {
     const t = i / sr;
-    const env = Math.exp(-t * 80);
-    // Two resonant frequencies — body + spring
-    const f1 = Math.sin(2 * Math.PI * 85 * t) * 1.0;
-    const f2 = Math.sin(2 * Math.PI * 140 * t) * 0.5;
-    const noise = (Math.random() * 2 - 1) * 0.15;
-    thudD[i] = (f1 + f2 + noise) * env;
+    const env = Math.exp(-t * 50);
+    // Chassis resonance — heavy low frequencies
+    const f1 = Math.sin(2 * Math.PI * 58 * t) * 1.0;
+    const f2 = Math.sin(2 * Math.PI * 110 * t) * 0.4;
+    // Slight pitch drop as the button seats (more realistic)
+    const f3 = Math.sin(2 * Math.PI * (200 - t * 2000) * t) * 0.15;
+    thudD[i] = (f1 + f2 + f3) * env;
   }
   const thudSrc = ctx.createBufferSource();
   thudSrc.buffer = thudBuf;
   const thudLp = ctx.createBiquadFilter();
-  thudLp.type = 'lowpass'; thudLp.frequency.value = 600;
+  thudLp.type = 'lowpass'; thudLp.frequency.value = 400;
   const thudGain = ctx.createGain();
-  thudGain.gain.value = 0.6;
+  thudGain.gain.value = 0.55;
   thudSrc.connect(thudLp).connect(thudGain).connect(ctx.destination);
   thudSrc.start(now);
 
-  // ── Layer 3: Latch/spring settle (short filtered noise tail) ──
-  const rattleLen = Math.floor(sr * 0.06);
-  const rattleBuf = ctx.createBuffer(1, rattleLen, sr);
-  const rattleD = rattleBuf.getChannelData(0);
-  for (let i = 0; i < rattleLen; i++) {
+  // ── Layer 3: Latch engagement click (sharp metallic snap, delayed) ──
+  const latchLen = Math.floor(sr * 0.004);
+  const latchBuf = ctx.createBuffer(1, latchLen, sr);
+  const latchD = latchBuf.getChannelData(0);
+  for (let i = 0; i < latchLen; i++) {
     const t = i / sr;
-    // Delayed onset (starts ~5ms in) with fast decay
-    const onset = Math.max(0, 1 - Math.exp(-(t - 0.005) * 300));
-    const env = onset * Math.exp(-(t - 0.005) * 60);
-    rattleD[i] = (Math.random() * 2 - 1) * env;
+    const env = Math.exp(-t * 1500);
+    // Metallic ring at ~3.5kHz — the "click" of the latch catching
+    latchD[i] = (Math.sin(2 * Math.PI * 3500 * t) * 0.6 + (Math.random() * 2 - 1) * 0.4) * env;
   }
-  const rattleSrc = ctx.createBufferSource();
-  rattleSrc.buffer = rattleBuf;
-  const rattleBp = ctx.createBiquadFilter();
-  rattleBp.type = 'bandpass'; rattleBp.frequency.value = 1800; rattleBp.Q.value = 2;
-  const rattleGain = ctx.createGain();
-  rattleGain.gain.value = 0.2;
-  rattleSrc.connect(rattleBp).connect(rattleGain).connect(ctx.destination);
-  rattleSrc.start(now);
+  const latchSrc = ctx.createBufferSource();
+  latchSrc.buffer = latchBuf;
+  const latchHp = ctx.createBiquadFilter();
+  latchHp.type = 'highpass'; latchHp.frequency.value = 2000;
+  const latchGain = ctx.createGain();
+  latchGain.gain.value = 0.3;
+  latchSrc.connect(latchHp).connect(latchGain).connect(ctx.destination);
+  latchSrc.start(now + 0.006); // delayed — latch engages after button bottoms out
+
+  // ── Layer 4: Mechanical settle (very brief filtered rattle) ──
+  const settleLen = Math.floor(sr * 0.035);
+  const settleBuf = ctx.createBuffer(1, settleLen, sr);
+  const settleD = settleBuf.getChannelData(0);
+  for (let i = 0; i < settleLen; i++) {
+    const t = i / sr;
+    const onset = Math.max(0, 1 - Math.exp(-(t - 0.008) * 500));
+    const env = onset * Math.exp(-(t - 0.008) * 100);
+    settleD[i] = (Math.random() * 2 - 1) * env;
+  }
+  const settleSrc = ctx.createBufferSource();
+  settleSrc.buffer = settleBuf;
+  const settleBp = ctx.createBiquadFilter();
+  settleBp.type = 'bandpass'; settleBp.frequency.value = 1200; settleBp.Q.value = 3;
+  const settleGain = ctx.createGain();
+  settleGain.gain.value = 0.12;
+  settleSrc.connect(settleBp).connect(settleGain).connect(ctx.destination);
+  settleSrc.start(now);
 }
 
 // ── Component ────────────────────────────────────────────────────────────
 interface CassetteDeckProps {
   embedBlock: ReactNode;
-  youtubeBlock?: ReactNode; // visible YouTube embed (rendered inside tape window)
+  youtubeBlock?: ReactNode; // visible YouTube embed (mobile: rendered inside tape window)
   compact?: boolean; // mobile compact layout
 }
 
-type LatchedButton = 'play' | 'pause' | 'stop' | null;
+type LatchedButton = 'play' | 'stop' | null;
 
 export default function CassetteDeck({ embedBlock, youtubeBlock, compact = false }: CassetteDeckProps) {
   const {
@@ -102,7 +126,7 @@ export default function CassetteDeck({ embedBlock, youtubeBlock, compact = false
 
   const [cassetteExpanded, setCassetteExpanded] = useState(!compact);
 
-  const latched: LatchedButton = isPlaying ? 'play' : currentTrack ? 'pause' : 'stop';
+  const latched: LatchedButton = isPlaying ? 'play' : 'stop';
 
   const momentaryRef = useRef<string | null>(null);
   const momentaryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -119,11 +143,6 @@ export default function CassetteDeck({ embedBlock, youtubeBlock, compact = false
       forceUpdate();
     }, 180);
   }, []);
-
-  const doPause = useCallback(() => {
-    clickSound();
-    if (isPlaying) pause();
-  }, [isPlaying, pause]);
 
   const doStop = useCallback(() => {
     clickSound();
@@ -256,12 +275,12 @@ export default function CassetteDeck({ embedBlock, youtubeBlock, compact = false
               <div style={{
                 position: 'absolute', top: '30%', left: '7%', right: '7%', bottom: '6%',
                 background: 'rgba(3,3,14,.7)', border: '1px solid rgba(255,45,135,.05)',
-                borderRadius: youtubeBlock ? '12%' : '40%',
+                borderRadius: (compact && youtubeBlock) ? '12%' : '40%',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
                 transition: 'border-radius .3s ease',
               }}>
-                {/* YouTube video inside tape window when active */}
-                {youtubeBlock && (
+                {/* YouTube video inside tape window — mobile only (desktop uses floating PIP) */}
+                {compact && youtubeBlock && (
                   <div className="yt-tape-window" style={{ position: 'absolute', inset: 0, zIndex: 5, borderRadius: 'inherit', overflow: 'hidden' }}>
                     {youtubeBlock}
                   </div>
@@ -352,14 +371,11 @@ export default function CassetteDeck({ embedBlock, youtubeBlock, compact = false
       {/* ═══ TRANSPORT BUTTONS (always visible) ═══ */}
       <div style={{ padding: `0 ${pad}px ${compact ? 6 : 8}px` }}>
         <div style={s.btnSlot}>
-          {/* On mobile, hide Stop + Rec */}
+          {/* On mobile, hide Stop */}
           {!compact && (
             <>
               <TransportBtn id="stop" isLatched={latched === 'stop'} onClick={doStop} label="Stop" btnH={btnH} keyH={keyH} edgeH={edgeH} latchOffset={latchOffset} latchEdge={latchEdge} small={compact}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
-              </TransportBtn>
-              <TransportBtn id="rec" isLatched={false} onClick={() => clickSound()} label="Rec" btnH={btnH} keyH={keyH} edgeH={edgeH} latchOffset={latchOffset} latchEdge={latchEdge} small={compact}>
-                <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#333350', border: '1.5px solid #444466' }} />
               </TransportBtn>
               <div style={s.slotDiv} />
             </>
@@ -385,10 +401,6 @@ export default function CassetteDeck({ embedBlock, youtubeBlock, compact = false
 
           <TransportBtn id="play" isLatched={latched === 'play'} isWide onClick={() => { clickSound(); if (!isPlaying && currentTrack) resume(); }} label="Play" btnH={btnH} keyH={keyH} edgeH={edgeH} latchOffset={latchOffset} latchEdge={latchEdge} small={compact}>
             <svg width={compact ? 12 : 14} height={compact ? 12 : 14} viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 21,12 5,21"/></svg>
-          </TransportBtn>
-
-          <TransportBtn id="pause" isLatched={latched === 'pause'} onClick={doPause} label="Pause" btnH={btnH} keyH={keyH} edgeH={edgeH} latchOffset={latchOffset} latchEdge={latchEdge} small={compact}>
-            <svg width={compact ? 10 : 12} height={compact ? 12 : 14} viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="3" width="5" height="18" rx="1.5"/><rect x="14" y="3" width="5" height="18" rx="1.5"/></svg>
           </TransportBtn>
         </div>
       </div>
