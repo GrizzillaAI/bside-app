@@ -1,12 +1,11 @@
 // Mixd — Spotify Playlist Fetcher
 // Lists user's playlists and fetches items for a given playlist.
-// Uses the stored Spotify access token (refreshes if expired via client_credentials).
+// Uses the stored Spotify access token (PKCE-compatible refresh).
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
 
 const SPOTIFY_CLIENT_ID = Deno.env.get('SPOTIFY_CLIENT_ID') ?? '';
-const SPOTIFY_CLIENT_SECRET = Deno.env.get('SPOTIFY_CLIENT_SECRET') ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
@@ -46,16 +45,17 @@ async function getValidToken(
     return { error: 'No refresh token — please reconnect Spotify', needs_reconnect: true };
   }
 
-  const basic = btoa(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`);
+  // PKCE-compatible refresh: client_id in body, NO client_secret / Basic auth.
+  // The token was originally obtained via PKCE flow, so the refresh MUST match.
   const refreshResp = await fetch('https://accounts.spotify.com/api/token', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
-      Authorization: `Basic ${basic}`,
     },
     body: new URLSearchParams({
       grant_type: 'refresh_token',
       refresh_token: conn.refresh_token,
+      client_id: SPOTIFY_CLIENT_ID,
     }),
   });
 
@@ -176,7 +176,8 @@ serve(async (req) => {
       }> = [];
 
       // NOTE: No fields filter — Spotify can reject complex field selectors
-      let url: string | null = `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlist_id)}/tracks?limit=100`;
+      // market=from_token tells Spotify to use the user's home market for track availability
+      let url: string | null = `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlist_id)}/tracks?limit=100&market=from_token`;
       while (url) {
         const resp = await fetch(url, {
           headers: { Authorization: `Bearer ${accessToken}` },

@@ -6,7 +6,6 @@ import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
 
 const SPOTIFY_CLIENT_ID = Deno.env.get('SPOTIFY_CLIENT_ID') ?? '';
-const SPOTIFY_CLIENT_SECRET = Deno.env.get('SPOTIFY_CLIENT_SECRET') ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
@@ -46,16 +45,17 @@ serve(async (req) => {
     if (connErr) return json({ error: connErr.message }, 500);
     if (!conn) return json({ error: 'No Spotify connection found' }, 404);
 
-    const basic = btoa(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`);
+    // PKCE-compatible refresh: client_id in body, NO client_secret / Basic auth.
+    // Token was originally obtained via PKCE flow, so refresh must match.
     const refreshResp = await fetch('https://accounts.spotify.com/api/token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        Authorization: `Basic ${basic}`,
       },
       body: new URLSearchParams({
         grant_type: 'refresh_token',
         refresh_token: conn.refresh_token,
+        client_id: SPOTIFY_CLIENT_ID,
       }),
     });
     if (!refreshResp.ok) {
