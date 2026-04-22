@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { User, CreditCard, LogOut, Crown, Check, Bell, Volume2, Music2, Link2, Link2Off, Loader2, Youtube } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import {
@@ -8,6 +8,7 @@ import {
 import {
   beginYouTubeOAuth, getMyYouTubeConnection, disconnectYouTube, type YouTubeConnection,
 } from '../lib/youtube';
+import { getMySubscription, startCheckout, type Subscription } from '../lib/subscription';
 
 export default function Settings() {
   const { user, signOut } = useAuth();
@@ -21,6 +22,12 @@ export default function Settings() {
   const [youtubeConn, setYoutubeConn] = useState<YouTubeConnection | null>(null);
   const [loadingYouTube, setLoadingYouTube] = useState(true);
   const [disconnectingYT, setDisconnectingYT] = useState(false);
+
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [loadingSub, setLoadingSub] = useState(true);
+  const [upgrading, setUpgrading] = useState(false);
+  const [searchParams] = useSearchParams();
+  const checkoutStatus = searchParams.get('checkout');
 
   useEffect(() => {
     (async () => {
@@ -37,6 +44,14 @@ export default function Settings() {
         setYoutubeConn(conn);
       } finally {
         setLoadingYouTube(false);
+      }
+    })();
+    (async () => {
+      try {
+        const sub = await getMySubscription();
+        setSubscription(sub);
+      } finally {
+        setLoadingSub(false);
       }
     })();
   }, []);
@@ -85,6 +100,23 @@ export default function Settings() {
       setDisconnectingYT(false);
     }
   };
+
+  const handleUpgrade = async () => {
+    setUpgrading(true);
+    try {
+      const result = await startCheckout();
+      if (!result.ok) {
+        alert(result.error);
+      }
+    } catch (err) {
+      alert('Unable to start checkout. Please try again.');
+    } finally {
+      setUpgrading(false);
+    }
+  };
+
+  const isProActive = subscription?.plan === 'pro' && (subscription?.status === 'active' || subscription?.status === 'trialing');
+  const isCanceling = isProActive && subscription?.cancel_at_period_end;
 
   const displayName = user?.user_metadata?.username || user?.email?.split('@')[0] || 'User';
   const displayEmail = user?.email || '';
@@ -227,20 +259,72 @@ export default function Settings() {
       {/* Subscription */}
       <div className="bg-[#0B0B12] border border-[#1A1A28] rounded-xl p-6">
         <h2 className="text-sm font-semibold text-[#5E5E7A] uppercase tracking-wider mb-4">Subscription</h2>
-        <div className="bg-[#050509] border border-[#1A1A28] rounded-lg p-4 mb-4">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm text-[#5E5E7A]">Current Plan</span>
-            <span className="text-xs font-semibold bg-[#1A1A28] px-2 py-1 rounded">FREE</span>
+
+        {checkoutStatus === 'success' && (
+          <div className="bg-green-900/30 border border-green-700 rounded-lg p-3 mb-4 text-sm text-green-300">
+            Payment successful! Your Pro subscription is now active. It may take a moment to update.
           </div>
-          <ul className="space-y-2 text-sm text-[#A0A0B8]">
-            {['Streaming with ads', 'Up to 3 playlists', '50 tracks in library', 'Standard quality', '10 searches/day'].map(f => (
-              <li key={f} className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-[#FF2D87]" /> {f}</li>
-            ))}
-          </ul>
-        </div>
-        <button className="w-full bg-gradient-to-r from-[#FF2D87] to-[#E01570] hover:opacity-90 py-3 rounded-lg text-sm font-semibold transition flex items-center justify-center gap-2">
-          <Crown className="w-4 h-4" /> Upgrade to Premium — $4.99/mo
-        </button>
+        )}
+        {checkoutStatus === 'canceled' && (
+          <div className="bg-yellow-900/30 border border-yellow-700 rounded-lg p-3 mb-4 text-sm text-yellow-300">
+            Checkout was canceled. No charge was made.
+          </div>
+        )}
+
+        {loadingSub ? (
+          <div className="flex items-center gap-2 text-sm text-[#5E5E7A] py-4">
+            <Loader2 className="w-4 h-4 animate-spin" /> Loading subscription...
+          </div>
+        ) : isProActive ? (
+          <>
+            <div className="bg-[#050509] border border-[#1A1A28] rounded-lg p-4 mb-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm text-[#5E5E7A]">Current Plan</span>
+                <span className="text-xs font-semibold bg-gradient-to-r from-[#FF2D87] to-[#E01570] px-2 py-1 rounded">PRO</span>
+              </div>
+              <ul className="space-y-2 text-sm text-[#A0A0B8]">
+
+                {['Ad-free streaming', 'Unlimited playlists', 'Unlimited library', 'High quality audio', 'Unlimited searches', 'Priority support'].map(f => (
+                  <li key={f} className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-[#FF2D87]" /> {f}</li>
+                ))}
+              </ul>
+              {isCanceling && subscription?.current_period_end && (
+                <p className="text-xs text-yellow-400 mt-3">
+                  Your subscription will end on {new Date(subscription.current_period_end).toLocaleDateString()}.
+                </p>
+              )}
+            </div>
+            <p className="text-xs text-[#5E5E7A]">
+              Manage your subscription and billing at{' '}
+              <a href="https://billing.stripe.com/p/login/test" target="_blank" rel="noopener noreferrer" className="text-[#FF2D87] hover:underline">
+                Stripe Customer Portal
+              </a>
+            </p>
+          </>
+        ) : (
+          <>
+            <div className="bg-[#050509] border border-[#1A1A28] rounded-lg p-4 mb-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm text-[#5E5E7A]">Current Plan</span>
+                <span className="text-xs font-semibold bg-[#1A1A28] px-2 py-1 rounded">FREE</span>
+              </div>
+              <ul className="space-y-2 text-sm text-[#A0A0B8]">
+
+                {['Streaming with ads', 'Up to 3 playlists', '50 tracks in library', 'Standard quality', '10 searches/day'].map(f => (
+                  <li key={f} className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-[#FF2D87]" /> {f}</li>
+                ))}
+              </ul>
+            </div>
+            <button
+              onClick={handleUpgrade}
+              disabled={upgrading}
+              className="w-full bg-gradient-to-r from-[#FF2D87] to-[#E01570] hover:opacity-90 disabled:opacity-50 py-3 rounded-lg text-sm font-semibold transition flex items-center justify-center gap-2"
+            >
+              {upgrading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Crown className="w-4 h-4" />}
+              {upgrading ? 'Redirecting to checkout...' : 'Upgrade to Pro — $4.99/mo'}
+            </button>
+          </>
+        )}
       </div>
 
       {/* Preferences */}
@@ -260,7 +344,7 @@ export default function Settings() {
               className="bg-[#050509] border border-[#1A1A28] rounded-lg px-3 py-1.5 text-sm outline-none focus:border-[#FF2D87]"
             >
               <option value="standard">Standard</option>
-              <option value="high" disabled>High (Premium)</option>
+              <option value="high" disabled={!isProActive}>High {!isProActive && '(Pro)'}</option>
             </select>
           </div>
           <div className="flex items-center justify-between">

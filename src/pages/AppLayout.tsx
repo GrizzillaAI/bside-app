@@ -146,8 +146,13 @@ export default function AppLayout() {
             </div>
           </div>
 
+<<<<<<< Updated upstream
           {/* ── Cassette Deck (pushed lower — YouTube PIP moved to content area) ── */}
           <div className="flex-1 flex flex-col justify-end min-h-0 px-1 pb-2">
+=======
+          {/* ── Cassette Deck ── */}
+          <div className="px-1 py-2 shrink-0">
+>>>>>>> Stashed changes
             <CassetteDeck embedBlock={hiddenEmbedBlock} compact={false} />
           </div>
 
@@ -172,7 +177,7 @@ export default function AppLayout() {
         </aside>
 
         {/* ── Right Column: Content ── */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 relative">
           {playbackError && (
             <div className="bg-red-500/15 border-b border-red-500/30 px-4 py-2 text-sm text-red-300 text-center">
               {playbackError}
@@ -192,7 +197,16 @@ export default function AppLayout() {
             )}
             <Outlet />
           </main>
+<<<<<<< Updated upstream
 
+=======
+          {/* YouTube PIP — floating in top-right, hover to enlarge */}
+          {youtubeBlock && (
+            <div className="absolute top-4 right-4 z-40">
+              {youtubeBlock}
+            </div>
+          )}
+>>>>>>> Stashed changes
         </div>
       </div>
     );
@@ -271,8 +285,14 @@ export default function AppLayout() {
       )}
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto p-4">
+      <main className="flex-1 overflow-y-auto p-4 relative">
         <Outlet />
+        {/* YouTube PIP — floating in top-right on mobile too */}
+        {youtubeBlock && (
+          <div className="fixed top-14 right-3 z-40">
+            {youtubeBlock}
+          </div>
+        )}
       </main>
 
       {/* Playback error */}
@@ -285,8 +305,8 @@ export default function AppLayout() {
         </div>
       )}
 
-      {/* Cassette Deck — mobile compact, cassette body collapsible, YouTube inside tape window */}
-      <CassetteDeck embedBlock={hiddenEmbedBlock} youtubeBlock={youtubeBlock} compact={true} />
+      {/* Cassette Deck — mobile compact, cassette body collapsible */}
+      <CassetteDeck embedBlock={hiddenEmbedBlock} compact={true} />
 
       {/* Bottom tab bar */}
       <nav className="flex items-center bg-void border-t border-slate shrink-0 safe-bottom">

@@ -112,13 +112,16 @@ function clickSound() {
 // ── Component ────────────────────────────────────────────────────────────
 interface CassetteDeckProps {
   embedBlock: ReactNode;
+<<<<<<< Updated upstream
   youtubeBlock?: ReactNode; // visible YouTube embed (mobile: rendered inside tape window)
+=======
+>>>>>>> Stashed changes
   compact?: boolean; // mobile compact layout
 }
 
 type LatchedButton = 'play' | 'stop' | null;
 
-export default function CassetteDeck({ embedBlock, youtubeBlock, compact = false }: CassetteDeckProps) {
+export default function CassetteDeck({ embedBlock, compact = false }: CassetteDeckProps) {
   const {
     currentTrack, isPlaying, currentTime, duration,
     seek, skipNext, skipPrev, pause, resume,
@@ -179,8 +182,7 @@ export default function CassetteDeck({ embedBlock, youtubeBlock, compact = false
   const latchEdge = compact ? 2 : 3;
 
   // Should we show the cassette visual?
-  // Auto-expand on mobile when YouTube is active (iframe must be visible to play)
-  const showCassette = compact ? (cassetteExpanded || !!youtubeBlock) : true;
+  const showCassette = compact ? cassetteExpanded : true;
 
   return (
     <div className="cassette-deck" style={{
@@ -195,8 +197,8 @@ export default function CassetteDeck({ embedBlock, youtubeBlock, compact = false
       overflow: 'hidden',
     }}>
 
-      {/* ── Mobile: expand/collapse toggle bar (hidden when YouTube forces expand) ── */}
-      {compact && !youtubeBlock && (
+      {/* ── Mobile: expand/collapse toggle bar ── */}
+      {compact && (
         <button
           onClick={() => setCassetteExpanded(!cassetteExpanded)}
           style={{
@@ -275,16 +277,22 @@ export default function CassetteDeck({ embedBlock, youtubeBlock, compact = false
               <div style={{
                 position: 'absolute', top: '30%', left: '7%', right: '7%', bottom: '6%',
                 background: 'rgba(3,3,14,.7)', border: '1px solid rgba(255,45,135,.05)',
+<<<<<<< Updated upstream
                 borderRadius: (compact && youtubeBlock) ? '12%' : '40%',
+=======
+                borderRadius: '40%',
+>>>>>>> Stashed changes
                 display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
-                transition: 'border-radius .3s ease',
               }}>
+<<<<<<< Updated upstream
                 {/* YouTube video inside tape window — mobile only (desktop uses floating PIP) */}
                 {compact && youtubeBlock && (
                   <div className="yt-tape-window" style={{ position: 'absolute', inset: 0, zIndex: 5, borderRadius: 'inherit', overflow: 'hidden' }}>
                     {youtubeBlock}
                   </div>
                 )}
+=======
+>>>>>>> Stashed changes
                 {/* Ribbon */}
                 <div style={{ position: 'absolute', top: '50%', left: '8%', right: '8%', height: '14%', transform: 'translateY(-50%)', zIndex: 0, background: 'rgba(255,45,135,.04)', borderTop: '1px solid rgba(255,45,135,.09)', borderBottom: '1px solid rgba(255,45,135,.05)' }} />
 
@@ -421,17 +429,6 @@ export default function CassetteDeck({ embedBlock, youtubeBlock, compact = false
       <style>{`
         @keyframes cassette-spin {
           to { transform: rotate(360deg); }
-        }
-        /* Override YouTubeEmbed sizing when rendered inside tape window */
-        .yt-tape-window > div {
-          width: 100% !important;
-          height: 100% !important;
-        }
-        .yt-tape-window > div > div {
-          width: 100% !important;
-          height: 100% !important;
-          position: absolute !important;
-          inset: 0 !important;
         }
       `}</style>
     </div>

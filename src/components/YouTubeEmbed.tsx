@@ -217,8 +217,8 @@ const YouTubeEmbed = forwardRef<YouTubeEmbedRef, YouTubeEmbedProps>(
           className={`
             absolute rounded-lg overflow-hidden bg-black transition-all duration-300 ease-in-out cursor-pointer
             ${expanded
-              ? 'w-80 h-[180px] z-50 shadow-2xl shadow-black/60 bottom-0 left-0'
-              : 'w-20 h-[60px] bottom-0 left-0'
+              ? 'w-80 h-[180px] z-50 shadow-2xl shadow-black/60 top-0 right-0'
+              : 'w-20 h-[60px] top-0 right-0'
             }
           `}
         >
