@@ -146,13 +146,8 @@ export default function AppLayout() {
             </div>
           </div>
 
-<<<<<<< Updated upstream
-          {/* ── Cassette Deck (pushed lower — YouTube PIP moved to content area) ── */}
-          <div className="flex-1 flex flex-col justify-end min-h-0 px-1 pb-2">
-=======
           {/* ── Cassette Deck ── */}
           <div className="px-1 py-2 shrink-0">
->>>>>>> Stashed changes
             <CassetteDeck embedBlock={hiddenEmbedBlock} compact={false} />
           </div>
 
@@ -197,16 +192,12 @@ export default function AppLayout() {
             )}
             <Outlet />
           </main>
-<<<<<<< Updated upstream
-
-=======
           {/* YouTube PIP — floating in top-right, hover to enlarge */}
           {youtubeBlock && (
             <div className="absolute top-4 right-4 z-40">
               {youtubeBlock}
             </div>
           )}
->>>>>>> Stashed changes
         </div>
       </div>
     );

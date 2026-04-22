@@ -112,10 +112,6 @@ function clickSound() {
 // ── Component ────────────────────────────────────────────────────────────
 interface CassetteDeckProps {
   embedBlock: ReactNode;
-<<<<<<< Updated upstream
-  youtubeBlock?: ReactNode; // visible YouTube embed (mobile: rendered inside tape window)
-=======
->>>>>>> Stashed changes
   compact?: boolean; // mobile compact layout
 }
 
@@ -277,22 +273,9 @@ export default function CassetteDeck({ embedBlock, compact = false }: CassetteDe
               <div style={{
                 position: 'absolute', top: '30%', left: '7%', right: '7%', bottom: '6%',
                 background: 'rgba(3,3,14,.7)', border: '1px solid rgba(255,45,135,.05)',
-<<<<<<< Updated upstream
-                borderRadius: (compact && youtubeBlock) ? '12%' : '40%',
-=======
                 borderRadius: '40%',
->>>>>>> Stashed changes
                 display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
               }}>
-<<<<<<< Updated upstream
-                {/* YouTube video inside tape window — mobile only (desktop uses floating PIP) */}
-                {compact && youtubeBlock && (
-                  <div className="yt-tape-window" style={{ position: 'absolute', inset: 0, zIndex: 5, borderRadius: 'inherit', overflow: 'hidden' }}>
-                    {youtubeBlock}
-                  </div>
-                )}
-=======
->>>>>>> Stashed changes
                 {/* Ribbon */}
                 <div style={{ position: 'absolute', top: '50%', left: '8%', right: '8%', height: '14%', transform: 'translateY(-50%)', zIndex: 0, background: 'rgba(255,45,135,.04)', borderTop: '1px solid rgba(255,45,135,.09)', borderBottom: '1px solid rgba(255,45,135,.05)' }} />
 

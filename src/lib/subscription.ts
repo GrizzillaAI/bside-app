@@ -62,3 +62,4 @@ export async function openCustomerPortal(): Promise<{ ok: true } | { ok: false; 
   window.location.href = data.url;
   return { ok: true };
 }
+
