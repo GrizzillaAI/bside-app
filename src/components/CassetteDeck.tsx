@@ -362,15 +362,10 @@ export default function CassetteDeck({ embedBlock, compact = false }: CassetteDe
       {/* ═══ TRANSPORT BUTTONS (always visible) ═══ */}
       <div style={{ padding: `0 ${pad}px ${compact ? 6 : 8}px` }}>
         <div style={s.btnSlot}>
-          {/* On mobile, hide Stop */}
-          {!compact && (
-            <>
-              <TransportBtn id="stop" isLatched={latched === 'stop'} onClick={doStop} label="Stop" btnH={btnH} keyH={keyH} edgeH={edgeH} latchOffset={latchOffset} latchEdge={latchEdge} small={compact}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
-              </TransportBtn>
-              <div style={s.slotDiv} />
-            </>
-          )}
+          <TransportBtn id="stop" isLatched={latched === 'stop'} onClick={doStop} label="Stop" btnH={btnH} keyH={keyH} edgeH={edgeH} latchOffset={latchOffset} latchEdge={latchEdge} small={compact}>
+            <svg width={compact ? 10 : 12} height={compact ? 10 : 12} viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+          </TransportBtn>
+          <div style={s.slotDiv} />
 
           <TransportBtn id="skb" isLatched={false} isMomentary onClick={doSkipBack} label="⏮" btnH={btnH} keyH={keyH} edgeH={edgeH} latchOffset={latchOffset} latchEdge={latchEdge} small={compact}>
             <svg width={compact ? 14 : 16} height={compact ? 10 : 12} viewBox="0 0 28 18" fill="currentColor"><rect x="1" y="2" width="3.5" height="14" rx="1.2"/><polygon points="24,2 11,9 24,16"/></svg>
