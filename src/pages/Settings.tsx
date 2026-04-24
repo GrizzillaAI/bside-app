@@ -8,7 +8,7 @@ import {
 import {
   beginYouTubeOAuth, getMyYouTubeConnection, disconnectYouTube, type YouTubeConnection,
 } from '../lib/youtube';
-import { getMySubscription, startCheckout, type Subscription } from '../lib/subscription';
+import { getMySubscription, startCheckout, openCustomerPortal, type Subscription } from '../lib/subscription';
 
 export default function Settings() {
   const { user, signOut } = useAuth();
@@ -26,6 +26,7 @@ export default function Settings() {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loadingSub, setLoadingSub] = useState(true);
   const [upgrading, setUpgrading] = useState(false);
+  const [openingPortal, setOpeningPortal] = useState(false);
   const [searchParams] = useSearchParams();
   const checkoutStatus = searchParams.get('checkout');
 
@@ -112,6 +113,20 @@ export default function Settings() {
       alert('Unable to start checkout. Please try again.');
     } finally {
       setUpgrading(false);
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    setOpeningPortal(true);
+    try {
+      const result = await openCustomerPortal();
+      if (!result.ok) {
+        alert(result.error);
+      }
+    } catch (err) {
+      alert('Unable to open billing portal. Please try again.');
+    } finally {
+      setOpeningPortal(false);
     }
   };
 
@@ -294,12 +309,14 @@ export default function Settings() {
                 </p>
               )}
             </div>
-            <p className="text-xs text-[#5E5E7A]">
-              Manage your subscription and billing at{' '}
-              <a href="https://billing.stripe.com/p/login/test" target="_blank" rel="noopener noreferrer" className="text-[#FF2D87] hover:underline">
-                Stripe Customer Portal
-              </a>
-            </p>
+            <button
+              onClick={handleManageSubscription}
+              disabled={openingPortal}
+              className="w-full bg-[#1A1A28] hover:bg-[#2A2A38] disabled:opacity-50 py-3 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2"
+            >
+              {openingPortal ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+              {openingPortal ? 'Opening billing portal...' : 'Manage Subscription & Billing'}
+            </button>
           </>
         ) : (
           <>
