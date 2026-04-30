@@ -19,8 +19,6 @@ const YOUTUBE_SCOPES = [
 export interface YouTubeConnection {
   user_id: string;
   youtube_channel_id: string | null;
-  access_token: string;
-  refresh_token: string;
   expires_at: string;
   scope: string | null;
   display_name: string | null;
@@ -113,7 +111,7 @@ export async function getMyYouTubeConnection(): Promise<YouTubeConnection | null
   if (!user) return null;
   const { data } = await supabase
     .from('youtube_connections')
-    .select('*')
+    .select('user_id, youtube_channel_id, expires_at, scope, display_name, email, avatar_url, connected_at, updated_at')
     .eq('user_id', user.id)
     .maybeSingle();
   return (data as YouTubeConnection) ?? null;

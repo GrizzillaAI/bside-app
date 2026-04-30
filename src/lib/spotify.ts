@@ -23,8 +23,6 @@ const SPOTIFY_SCOPES = [
 export interface SpotifyConnection {
   user_id: string;
   spotify_user_id: string | null;
-  access_token: string;
-  refresh_token: string;
   expires_at: string;
   scope: string | null;
   is_premium: boolean;
@@ -122,7 +120,7 @@ export async function getMySpotifyConnection(): Promise<SpotifyConnection | null
   if (!user) return null;
   const { data } = await supabase
     .from('spotify_connections')
-    .select('*')
+    .select('user_id, spotify_user_id, expires_at, scope, is_premium, display_name, email, connected_at, updated_at')
     .eq('user_id', user.id)
     .maybeSingle();
   return (data as SpotifyConnection) ?? null;

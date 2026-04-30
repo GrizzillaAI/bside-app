@@ -223,6 +223,17 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     audio.addEventListener('pause', () => {
       if (backendRef.current === 'html') setIsPlaying(false);
     });
+    audio.addEventListener('error', () => {
+      if (backendRef.current === 'html') {
+        const code = audio.error?.code;
+        const msg = code === 4 ? 'This track format is not supported by your browser.'
+          : code === 2 ? 'Network error — check your connection and try again.'
+          : 'Playback failed. Skipping to next track.';
+        setPlaybackError(msg);
+        // Auto-advance after a brief delay so the user sees the error
+        setTimeout(() => advanceQueue(), 2000);
+      }
+    });
     audioRef.current = audio;
 
     return () => {

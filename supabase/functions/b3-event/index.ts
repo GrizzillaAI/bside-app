@@ -47,8 +47,12 @@ serve(async (req) => {
     const { event_type, properties } = await req.json();
     if (!event_type) return json({ error: 'Missing event_type' }, 400);
 
-    // Allowlist — only accept the app-code events we expect
-    const ALLOWED_EVENTS = ['search.performed', 'playlist.created'];
+    // Allowlist — accept all app-code events the client sends
+    const ALLOWED_EVENTS = [
+      'search.performed', 'playlist.created',
+      'play.started', 'play.completed', 'play.skipped',
+      'track.saved',
+    ];
     if (!ALLOWED_EVENTS.includes(event_type)) {
       return json({ error: `Event type '${event_type}' not allowed` }, 400);
     }

@@ -126,7 +126,7 @@ export interface MultiSourceStatus {
 // Phase 1 default sources: YouTube + Spotify (Premium-gated) + SoundCloud.
 // Apple Music is deferred to Phase 2 — the Edge Function remains deployed but
 // is not included in the default fan-out.
-export const PHASE_1_SOURCES: SourcePlatform[] = ['youtube', 'spotify', 'soundcloud', 'podcast', 'applemusic'];
+export const PHASE_1_SOURCES: SourcePlatform[] = ['youtube', 'spotify', 'soundcloud', 'podcast'];
 
 export async function searchAll(
   query: string,

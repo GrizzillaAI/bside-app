@@ -3,6 +3,7 @@ import LandingPage from './pages/LandingPage';
 import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
 import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import AppLayout from './pages/AppLayout';
 import Home from './pages/Home';
 import Library from './pages/Library';
@@ -22,6 +23,7 @@ export default function App() {
       <Route path="/signin" element={<SignIn />} />
       <Route path="/signup" element={<SignUp />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* OAuth callbacks (protected so the user is signed in when we exchange the code) */}
       <Route
