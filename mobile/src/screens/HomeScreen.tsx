@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, FlatList, Image, ScrollView, Platform,
+  View, Text, TouchableOpacity, StyleSheet, FlatList, Image, ScrollView, Platform, RefreshControl,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,26 +33,33 @@ export default function HomeScreen() {
   const { play, currentTrack, isPlaying, togglePlayPause, replaceQueue } = usePlayer();
   const [recent, setRecent] = useState<HomeTrack[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const displayName = user?.user_metadata?.username || user?.email?.split('@')[0] || 'there';
   const hello = greeting(new Date().getHours());
 
-  useEffect(() => {
-    (async () => {
-      const { data: { user: u } } = await supabase.auth.getUser();
-      if (!u) { setLoading(false); return; }
-      const { data } = await supabase
-        .from('library_tracks')
-        .select('track:tracks(id, title, artist, source_platform, source_url, source_id, thumbnail_url, duration_seconds)')
-        .eq('user_id', u.id)
-        .order('added_at', { ascending: false })
-        .limit(6);
-      if (data) {
-        setRecent((data as any[]).map((r) => r.track).filter(Boolean));
-      }
-      setLoading(false);
-    })();
+  const loadRecent = useCallback(async () => {
+    const { data: { user: u } } = await supabase.auth.getUser();
+    if (!u) { setLoading(false); return; }
+    const { data } = await supabase
+      .from('library_tracks')
+      .select('track:tracks(id, title, artist, source_platform, source_url, source_id, thumbnail_url, duration_seconds)')
+      .eq('user_id', u.id)
+      .order('added_at', { ascending: false })
+      .limit(6);
+    if (data) {
+      setRecent((data as any[]).map((r) => r.track).filter(Boolean));
+    }
+    setLoading(false);
   }, []);
+
+  useEffect(() => { loadRecent(); }, [loadRecent]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadRecent();
+    setRefreshing(false);
+  }, [loadRecent]);
 
   const handlePlayRecent = (t: HomeTrack) => {
     const isThis = currentTrack?.source_id === t.source_id;
@@ -76,7 +83,13 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={{ paddingBottom: 100 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.pink} />
+        }
+      >
         <View style={styles.header}>
           <Lockup markSize={24} wordSize={18} />
         </View>

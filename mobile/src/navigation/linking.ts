@@ -17,12 +17,18 @@ export const linking: LinkingOptions<any> = {
       },
       Main: {
         screens: {
-          Home: 'app',
-          Library: 'app/library',
-          Search: 'app/search',
-          Playlists: 'app/playlists',
-          Import: 'app/import',
-          Settings: 'app/settings',
+          Tabs: {
+            screens: {
+              Home: 'app',
+              Library: 'app/library',
+              Search: 'app/search',
+              Playlists: 'app/playlists',
+              Import: 'app/import',
+              Settings: 'app/settings',
+            },
+          },
+          NowPlaying: 'app/now-playing',
+          PlaylistDetail: 'app/playlist/:playlistId',
         },
       },
     },

@@ -9,20 +9,29 @@ import HomeScreen from '../screens/HomeScreen';
 import LibraryScreen from '../screens/LibraryScreen';
 import SearchScreen from '../screens/SearchScreen';
 import PlaylistsScreen from '../screens/PlaylistsScreen';
+import PlaylistDetailScreen from '../screens/PlaylistDetailScreen';
 import ImportScreen from '../screens/ImportScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import NowPlayingScreen from '../screens/NowPlayingScreen';
 import MiniPlayer from '../components/MiniPlayer';
 
 export type MainTabParamList = {
   Home: undefined;
   Library: undefined;
-  Search: undefined;
+  Search: { initialQuery?: string } | undefined;
   Playlists: undefined;
   Import: undefined;
   Settings: undefined;
 };
 
+export type MainStackParamList = {
+  Tabs: undefined;
+  NowPlaying: undefined;
+  PlaylistDetail: { playlistId: string; playlistName: string };
+};
+
 const Tab = createBottomTabNavigator<MainTabParamList>();
+const Stack = createNativeStackNavigator<MainStackParamList>();
 
 const tabIcons: Record<string, keyof typeof Ionicons.glyphMap> = {
   Home: 'home',
@@ -33,7 +42,7 @@ const tabIcons: Record<string, keyof typeof Ionicons.glyphMap> = {
   Settings: 'settings',
 };
 
-export function MainNavigator() {
+function TabsScreen() {
   const { currentTrack } = usePlayer();
 
   return (
@@ -68,5 +77,28 @@ export function MainNavigator() {
       </Tab.Navigator>
       {currentTrack && <MiniPlayer />}
     </View>
+  );
+}
+
+export function MainNavigator() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Tabs" component={TabsScreen} />
+      <Stack.Screen
+        name="NowPlaying"
+        component={NowPlayingScreen}
+        options={{
+          presentation: 'fullScreenModal',
+          animation: 'slide_from_bottom',
+        }}
+      />
+      <Stack.Screen
+        name="PlaylistDetail"
+        component={PlaylistDetailScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+    </Stack.Navigator>
   );
 }

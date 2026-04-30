@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  FlatList, Alert, ActivityIndicator, Modal,
+  FlatList, Alert, ActivityIndicator, Modal, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { getMyPlaylists, createPlaylist, deletePlaylist, getPlaylistTracks, type Playlist } from '../lib/api';
 import { usePlayer } from '../lib/player';
 import { colors, radii, spacing } from '../lib/theme';
@@ -12,9 +13,11 @@ import { colors, radii, spacing } from '../lib/theme';
 export default function PlaylistsScreen() {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
   const { play, replaceQueue } = usePlayer();
+  const navigation = useNavigation<any>();
 
   const load = useCallback(async () => {
     try {
@@ -25,6 +28,12 @@ export default function PlaylistsScreen() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, [load]);
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
@@ -66,7 +75,11 @@ export default function PlaylistsScreen() {
   };
 
   const renderItem = ({ item }: { item: Playlist }) => (
-    <TouchableOpacity style={styles.row} onPress={() => handlePlayPlaylist(item)} activeOpacity={0.7}>
+    <TouchableOpacity
+      style={styles.row}
+      onPress={() => navigation.navigate('PlaylistDetail', { playlistId: item.id, playlistName: item.name })}
+      activeOpacity={0.7}
+    >
       <View style={styles.coverWrap}>
         <Ionicons name="list" size={20} color={colors.silver} />
       </View>
@@ -74,6 +87,9 @@ export default function PlaylistsScreen() {
         <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
         <Text style={styles.meta}>{item.track_count} track{item.track_count !== 1 ? 's' : ''}</Text>
       </View>
+      <TouchableOpacity onPress={() => handlePlayPlaylist(item)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <Ionicons name="play-circle" size={24} color={colors.pink} />
+      </TouchableOpacity>
       <TouchableOpacity onPress={() => handleDelete(item)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
         <Ionicons name="trash-outline" size={18} color={colors.ash} />
       </TouchableOpacity>
@@ -103,6 +119,9 @@ export default function PlaylistsScreen() {
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingBottom: 100 }}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.pink} />
+          }
         />
       )}
 

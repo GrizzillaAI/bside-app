@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { usePlayer } from '../lib/player';
 import { searchAll, saveTrackToLibrary, logB3Event, type UnifiedResult } from '../lib/api';
+import AddToPlaylistModal from '../components/AddToPlaylistModal';
 import { colors, radii, spacing } from '../lib/theme';
 
 const PLATFORM_COLORS: Record<string, string> = {
@@ -18,6 +19,7 @@ export default function SearchScreen({ route }: { route?: any }) {
   const [query, setQuery] = useState(route?.params?.initialQuery || '');
   const [results, setResults] = useState<UnifiedResult[]>([]);
   const [searching, setSearching] = useState(false);
+  const [playlistModalTrack, setPlaylistModalTrack] = useState<UnifiedResult | null>(null);
   const { play, replaceQueue } = usePlayer();
 
   const doSearch = useCallback(async () => {
@@ -83,6 +85,9 @@ export default function SearchScreen({ route }: { route?: any }) {
           {item.duration_display ? ` · ${item.duration_display}` : ''}
         </Text>
       </View>
+      <TouchableOpacity onPress={() => setPlaylistModalTrack(item)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <Ionicons name="list-circle-outline" size={24} color={colors.cobalt} />
+      </TouchableOpacity>
       <TouchableOpacity onPress={() => handleSave(item)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
         <Ionicons name="add-circle-outline" size={24} color={colors.pink} />
       </TouchableOpacity>
@@ -130,6 +135,19 @@ export default function SearchScreen({ route }: { route?: any }) {
           contentContainerStyle={{ paddingBottom: 100 }}
         />
       )}
+      <AddToPlaylistModal
+        visible={!!playlistModalTrack}
+        track={playlistModalTrack ? {
+          title: playlistModalTrack.title,
+          artist: playlistModalTrack.artist,
+          source_platform: playlistModalTrack.source_platform,
+          source_url: playlistModalTrack.external_url,
+          source_id: playlistModalTrack.source_id,
+          thumbnail_url: playlistModalTrack.thumbnail_url,
+          duration_seconds: playlistModalTrack.duration_seconds,
+        } : null}
+        onClose={() => setPlaylistModalTrack(null)}
+      />
     </SafeAreaView>
   );
 }

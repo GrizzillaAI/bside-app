@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  FlatList, Image, Alert, ActivityIndicator,
+  FlatList, Image, Alert, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { usePlayer, formatTime } from '../lib/player';
 import { supabase } from '../lib/supabase';
 import { saveTrackToLibrary } from '../lib/api';
+import AddToPlaylistModal from '../components/AddToPlaylistModal';
 import { colors, radii, spacing } from '../lib/theme';
 
 interface LibTrack {
@@ -20,7 +21,9 @@ export default function LibraryScreen() {
   const { play, currentTrack, isPlaying, togglePlayPause, replaceQueue } = usePlayer();
   const [tracks, setTracks] = useState<LibTrack[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [pasteUrl, setPasteUrl] = useState('');
+  const [playlistModalTrack, setPlaylistModalTrack] = useState<LibTrack | null>(null);
 
   const loadTracks = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -35,6 +38,12 @@ export default function LibraryScreen() {
   }, []);
 
   useEffect(() => { loadTracks(); }, [loadTracks]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadTracks();
+    setRefreshing(false);
+  }, [loadTracks]);
 
   const handlePaste = async () => {
     if (!pasteUrl.trim()) return;
@@ -87,6 +96,12 @@ export default function LibraryScreen() {
         {item.duration_seconds ? (
           <Text style={styles.dur}>{formatTime(item.duration_seconds)}</Text>
         ) : null}
+        <TouchableOpacity
+          onPress={() => setPlaylistModalTrack(item)}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="list-circle-outline" size={22} color={colors.cobalt} />
+        </TouchableOpacity>
       </TouchableOpacity>
     );
   };
@@ -129,8 +144,24 @@ export default function LibraryScreen() {
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingBottom: 100 }}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.pink} />
+          }
         />
       )}
+      <AddToPlaylistModal
+        visible={!!playlistModalTrack}
+        track={playlistModalTrack ? {
+          title: playlistModalTrack.title,
+          artist: playlistModalTrack.artist || '',
+          source_platform: playlistModalTrack.source_platform,
+          source_url: playlistModalTrack.source_url,
+          source_id: playlistModalTrack.source_id || '',
+          thumbnail_url: playlistModalTrack.thumbnail_url || '',
+          duration_seconds: playlistModalTrack.duration_seconds,
+        } : null}
+        onClose={() => setPlaylistModalTrack(null)}
+      />
     </SafeAreaView>
   );
 }

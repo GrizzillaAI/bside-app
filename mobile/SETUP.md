@@ -224,17 +224,19 @@ mobile/
 │   └── adaptive-icon.png    ← Android adaptive icon
 └── src/
     ├── components/
-    │   ├── Logo.tsx          ← Mixd X-mark + wordmark
-    │   └── MiniPlayer.tsx    ← Bottom player bar
+    │   ├── AddToPlaylistModal.tsx ← Add-to-playlist bottom sheet
+    │   ├── Logo.tsx              ← Mixd X-mark + wordmark
+    │   ├── MiniPlayer.tsx        ← Bottom player bar (tap to expand)
+    │   └── YouTubePlayer.tsx     ← YouTube iframe player component
     ├── lib/
     │   ├── api.ts            ← Search, playlists, track saving
     │   ├── auth.tsx          ← Auth context (sign in/up/out)
-    │   ├── player.tsx        ← Audio player context
+    │   ├── player.tsx        ← Audio + YouTube player context
     │   ├── supabase.ts       ← Supabase client (PUT YOUR KEY HERE)
     │   └── theme.ts          ← Colors, spacing, Mixd design tokens
     ├── navigation/
     │   ├── AuthNavigator.tsx  ← Sign in/up/forgot password flow
-    │   ├── MainNavigator.tsx  ← Tab bar (Home/Library/Search/etc.)
+    │   ├── MainNavigator.tsx  ← Tab bar + NowPlaying + PlaylistDetail
     │   ├── RootNavigator.tsx  ← Switches between auth & main
     │   └── linking.ts         ← Deep link config
     └── screens/
@@ -242,6 +244,8 @@ mobile/
         ├── LibraryScreen.tsx
         ├── SearchScreen.tsx
         ├── PlaylistsScreen.tsx
+        ├── PlaylistDetailScreen.tsx ← Track list inside a playlist
+        ├── NowPlayingScreen.tsx     ← Full-screen player with queue
         ├── ImportScreen.tsx
         ├── SettingsScreen.tsx
         ├── SignInScreen.tsx
@@ -256,12 +260,17 @@ mobile/
 - ✅ Full auth flow (sign in, sign up, forgot password)
 - ✅ Multi-platform search (YouTube, Spotify, SoundCloud, Podcasts)
 - ✅ Library with paste-a-link support
-- ✅ Playlists (create, play, delete)
+- ✅ Playlists (create, play, delete, detail view with track list)
 - ✅ Import screen (Spotify & YouTube OAuth)
 - ✅ Settings (connected accounts, subscription management, sign out)
-- ✅ Mini player with progress bar
+- ✅ Mini player with progress bar (tap to expand)
+- ✅ Full-screen Now Playing screen with artwork, progress scrubber, queue view
+- ✅ YouTube playback via react-native-youtube-iframe
 - ✅ Audio playback via expo-av (SoundCloud, podcasts)
 - ✅ Background audio support
+- ✅ Add-to-Playlist modal (from Search and Library)
+- ✅ Pull-to-refresh on Home, Library, and Playlists
+- ✅ Playlist detail screen with play-all, remove tracks
 - ✅ Secure token storage (expo-secure-store)
 - ✅ B3 event tracking
 - ✅ Mixd branding (ink/pearl/pink color scheme)
@@ -270,7 +279,6 @@ mobile/
 ## What Needs More Work (Next Sessions)
 
 - 🔲 Full cassette deck UI (visual tape animation)
-- 🔲 YouTube iframe player integration (WebView-based)
 - 🔲 Spotify SDK integration for Premium playback
 - 🔲 Push notifications
 - 🔲 Offline mode / download support

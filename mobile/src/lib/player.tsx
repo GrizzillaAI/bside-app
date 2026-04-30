@@ -23,6 +23,8 @@ interface PlayerState {
   volume: number;          // 0–1
   queue: PlayerTrack[];
   playbackError: string | null;
+  /** True when current track uses YouTube iframe (not expo-av) */
+  isYouTubeTrack: boolean;
 
   play: (track: PlayerTrack) => Promise<void>;
   togglePlayPause: () => Promise<void>;
@@ -33,6 +35,10 @@ interface PlayerState {
   skipPrev: () => void;
   replaceQueue: (tracks: PlayerTrack[]) => void;
   addToQueue: (track: PlayerTrack) => void;
+  /** Called by YouTubePlayer component to sync progress */
+  updateYouTubeProgress: (pos: number, dur: number) => void;
+  /** Called by YouTubePlayer component on state change */
+  handleYouTubeStateChange: (state: string) => void;
 }
 
 const PlayerContext = createContext<PlayerState | undefined>(undefined);
@@ -187,12 +193,30 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setQueue((q) => [...q, track]);
   }, []);
 
+  const isYouTubeTrack = currentTrack?.source_platform === 'youtube';
+
+  const updateYouTubeProgress = useCallback((pos: number, dur: number) => {
+    setPosition(Math.floor(pos));
+    if (dur > 0) setDuration(Math.floor(dur));
+  }, []);
+
+  const handleYouTubeStateChange = useCallback((state: string) => {
+    if (state === 'ended') {
+      advanceQueue();
+    } else if (state === 'playing') {
+      setIsPlaying(true);
+    } else if (state === 'paused') {
+      setIsPlaying(false);
+    }
+  }, [advanceQueue]);
+
   return (
     <PlayerContext.Provider
       value={{
         currentTrack, isPlaying, position, duration, volume, queue, playbackError,
+        isYouTubeTrack,
         play, togglePlayPause, stop, seekTo, setVolume, skipNext, skipPrev,
-        replaceQueue, addToQueue,
+        replaceQueue, addToQueue, updateYouTubeProgress, handleYouTubeStateChange,
       }}
     >
       {children}
