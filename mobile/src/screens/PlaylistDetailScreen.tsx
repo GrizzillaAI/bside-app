@@ -2,8 +2,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  FlatList, Image, Alert, ActivityIndicator,
+  FlatList, Image, Alert, ActivityIndicator, Animated,
 } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
@@ -100,34 +101,52 @@ export default function PlaylistDetailScreen() {
 
   const totalDuration = tracks.reduce((sum, t) => sum + (t.track.duration_seconds || 0), 0);
 
+  const renderSwipeRight = (item: PlaylistTrack) => (
+    _progress: Animated.AnimatedInterpolation<number>,
+    _dragX: Animated.AnimatedInterpolation<number>,
+  ) => (
+    <TouchableOpacity style={styles.swipeDelete} onPress={() => handleRemove(item)}>
+      <Ionicons name="trash-outline" size={22} color={colors.pearl} />
+      <Text style={styles.swipeDeleteText}>Remove</Text>
+    </TouchableOpacity>
+  );
+
   const renderItem = ({ item, index }: { item: PlaylistTrack; index: number }) => {
     const t = item.track;
     const isThis = currentTrack?.source_id === t.source_id;
     return (
-      <TouchableOpacity style={styles.row} onPress={() => handlePlay(item, index)} activeOpacity={0.7}>
-        <Text style={[styles.rowNum, isThis && { color: colors.pink }]}>{index + 1}</Text>
-        <View style={styles.thumbWrap}>
-          {t.thumbnail_url ? (
-            <Image source={{ uri: t.thumbnail_url }} style={styles.thumb} />
-          ) : (
-            <Ionicons name="musical-note" size={18} color={colors.silver} />
-          )}
-        </View>
-        <View style={styles.info}>
-          <Text style={[styles.title, isThis && { color: colors.pink }]} numberOfLines={1}>{t.title}</Text>
-          <Text style={styles.artist} numberOfLines={1}>{t.artist || 'Unknown artist'}</Text>
-        </View>
-        {t.duration_seconds ? (
-          <Text style={styles.dur}>{formatTime(t.duration_seconds)}</Text>
-        ) : null}
+      <Swipeable renderRightActions={renderSwipeRight(item)} overshootRight={false}>
         <TouchableOpacity
-          onPress={() => handleRemove(item)}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          style={styles.removeBtn}
+          style={styles.row}
+          onPress={() => handlePlay(item, index)}
+          onLongPress={() => handleRemove(item)}
+          delayLongPress={500}
+          activeOpacity={0.7}
         >
-          <Ionicons name="close-circle-outline" size={20} color={colors.ash} />
+          <Text style={[styles.rowNum, isThis && { color: colors.pink }]}>{index + 1}</Text>
+          <View style={styles.thumbWrap}>
+            {t.thumbnail_url ? (
+              <Image source={{ uri: t.thumbnail_url }} style={styles.thumb} />
+            ) : (
+              <Ionicons name="musical-note" size={18} color={colors.silver} />
+            )}
+          </View>
+          <View style={styles.info}>
+            <Text style={[styles.title, isThis && { color: colors.pink }]} numberOfLines={1}>{t.title}</Text>
+            <Text style={styles.artist} numberOfLines={1}>{t.artist || 'Unknown artist'}</Text>
+          </View>
+          {t.duration_seconds ? (
+            <Text style={styles.dur}>{formatTime(t.duration_seconds)}</Text>
+          ) : null}
+          <TouchableOpacity
+            onPress={() => handleRemove(item)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={styles.removeBtn}
+          >
+            <Ionicons name="close-circle-outline" size={20} color={colors.ash} />
+          </TouchableOpacity>
         </TouchableOpacity>
-      </TouchableOpacity>
+      </Swipeable>
     );
   };
 
@@ -241,6 +260,19 @@ const styles = StyleSheet.create({
   artist: { color: colors.silver, fontSize: 11, marginTop: 1 },
   dur: { color: colors.ash, fontSize: 11, fontVariant: ['tabular-nums'] },
   removeBtn: { padding: 4 },
+  swipeDelete: {
+    backgroundColor: '#CC2244',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 80,
+    paddingHorizontal: 8,
+  },
+  swipeDeleteText: {
+    color: colors.pearl,
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 4,
+  },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 8 },
   emptyTitle: { color: colors.pearl, fontSize: 16, fontWeight: '600' },
   emptyDesc: { color: colors.silver, fontSize: 13 },

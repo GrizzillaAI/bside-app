@@ -1,14 +1,18 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   FlatList, Image, ActivityIndicator, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usePlayer } from '../lib/player';
 import { searchAll, saveTrackToLibrary, logB3Event, type UnifiedResult } from '../lib/api';
 import AddToPlaylistModal from '../components/AddToPlaylistModal';
 import { colors, radii, spacing } from '../lib/theme';
+
+const RECENT_KEY = 'mixd_recent_searches';
+const MAX_RECENT = 10;
 
 const PLATFORM_COLORS: Record<string, string> = {
   youtube: '#FF0000', spotify: '#1DB954', soundcloud: '#FF5500',
@@ -20,20 +24,44 @@ export default function SearchScreen({ route }: { route?: any }) {
   const [results, setResults] = useState<UnifiedResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [playlistModalTrack, setPlaylistModalTrack] = useState<UnifiedResult | null>(null);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const { play, replaceQueue } = usePlayer();
 
-  const doSearch = useCallback(async () => {
-    if (!query.trim()) return;
+  // Load recent searches on mount
+  useEffect(() => {
+    AsyncStorage.getItem(RECENT_KEY).then((raw) => {
+      if (raw) {
+        try { setRecentSearches(JSON.parse(raw)); } catch {}
+      }
+    });
+  }, []);
+
+  const saveRecentSearch = useCallback(async (q: string) => {
+    const updated = [q, ...recentSearches.filter((s) => s.toLowerCase() !== q.toLowerCase())].slice(0, MAX_RECENT);
+    setRecentSearches(updated);
+    await AsyncStorage.setItem(RECENT_KEY, JSON.stringify(updated));
+  }, [recentSearches]);
+
+  const clearRecentSearches = useCallback(async () => {
+    setRecentSearches([]);
+    await AsyncStorage.removeItem(RECENT_KEY);
+  }, []);
+
+  const doSearch = useCallback(async (searchQuery?: string) => {
+    const q = (searchQuery || query).trim();
+    if (!q) return;
+    setQuery(q);
     setSearching(true);
     try {
-      const { results: r } = await searchAll(query.trim());
+      const { results: r } = await searchAll(q);
       setResults(r);
-      logB3Event('search.performed', { query: query.trim(), result_count: r.length });
+      logB3Event('search.performed', { query: q, result_count: r.length });
+      saveRecentSearch(q);
     } catch (err) {
       Alert.alert('Search failed', (err as Error).message);
     }
     setSearching(false);
-  }, [query]);
+  }, [query, saveRecentSearch]);
 
   const handlePlay = (item: UnifiedResult, index: number) => {
     play({
@@ -122,10 +150,30 @@ export default function SearchScreen({ route }: { route?: any }) {
           <Text style={styles.muted}>Searching YouTube, Spotify, SoundCloud...</Text>
         </View>
       ) : results.length === 0 ? (
-        <View style={styles.center}>
-          <Ionicons name="search" size={48} color={colors.ash} />
-          <Text style={styles.emptyTitle}>Search across every platform</Text>
-          <Text style={styles.muted}>YouTube, Spotify, SoundCloud, and more</Text>
+        <View style={styles.emptyContainer}>
+          {recentSearches.length > 0 ? (
+            <>
+              <View style={styles.recentHeader}>
+                <Text style={styles.recentLabel}>RECENT SEARCHES</Text>
+                <TouchableOpacity onPress={clearRecentSearches}>
+                  <Text style={styles.clearBtn}>Clear</Text>
+                </TouchableOpacity>
+              </View>
+              {recentSearches.map((q, i) => (
+                <TouchableOpacity key={`${q}-${i}`} style={styles.recentRow} onPress={() => doSearch(q)}>
+                  <Ionicons name="time-outline" size={16} color={colors.ash} />
+                  <Text style={styles.recentText}>{q}</Text>
+                  <Ionicons name="arrow-forward" size={14} color={colors.ash} />
+                </TouchableOpacity>
+              ))}
+            </>
+          ) : (
+            <View style={styles.center}>
+              <Ionicons name="search" size={48} color={colors.ash} />
+              <Text style={styles.emptyTitle}>Search across every platform</Text>
+              <Text style={styles.muted}>YouTube, Spotify, SoundCloud, and more</Text>
+            </View>
+          )}
         </View>
       ) : (
         <FlatList
@@ -179,6 +227,25 @@ const styles = StyleSheet.create({
   title: { color: colors.pearl, fontSize: 14, fontWeight: '600' },
   artist: { color: colors.silver, fontSize: 12, marginTop: 1 },
   meta: { color: colors.ash, fontSize: 10, marginTop: 2 },
+  emptyContainer: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.md },
+  recentHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  recentLabel: {
+    color: colors.silver, fontSize: 10, fontWeight: '700', letterSpacing: 1.5,
+  },
+  clearBtn: {
+    color: colors.pink, fontSize: 12, fontWeight: '600',
+  },
+  recentRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.slate,
+  },
+  recentText: {
+    flex: 1, color: colors.pearl, fontSize: 14,
+  },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 8 },
   emptyTitle: { color: colors.pearl, fontSize: 16, fontWeight: '600' },
   muted: { color: colors.silver, fontSize: 13, marginTop: 4 },

@@ -15,6 +15,8 @@ export interface PlayerTrack {
   source_url: string;
 }
 
+type RepeatMode = 'off' | 'all' | 'one';
+
 interface PlayerState {
   currentTrack: PlayerTrack | null;
   isPlaying: boolean;
@@ -25,6 +27,8 @@ interface PlayerState {
   playbackError: string | null;
   /** True when current track uses YouTube iframe (not expo-av) */
   isYouTubeTrack: boolean;
+  shuffle: boolean;
+  repeatMode: RepeatMode;
 
   play: (track: PlayerTrack) => Promise<void>;
   togglePlayPause: () => Promise<void>;
@@ -35,6 +39,8 @@ interface PlayerState {
   skipPrev: () => void;
   replaceQueue: (tracks: PlayerTrack[]) => void;
   addToQueue: (track: PlayerTrack) => void;
+  toggleShuffle: () => void;
+  cycleRepeat: () => void;
   /** Called by YouTubePlayer component to sync progress */
   updateYouTubeProgress: (pos: number, dur: number) => void;
   /** Called by YouTubePlayer component on state change */
@@ -51,6 +57,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [volume, setVolumeState] = useState(1);
   const [queue, setQueue] = useState<PlayerTrack[]>([]);
   const [playbackError, setPlaybackError] = useState<string | null>(null);
+  const [shuffle, setShuffle] = useState(false);
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
 
   const soundRef = useRef<Audio.Sound | null>(null);
   const historyRef = useRef<PlayerTrack[]>([]);
@@ -125,14 +133,38 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [currentTrack, volume, cleanup]);
 
   const advanceQueue = useCallback(async () => {
+    // Repeat One: replay current track
+    if (repeatMode === 'one' && currentTrack) {
+      await play(currentTrack);
+      return;
+    }
+
     if (queue.length > 0) {
-      const [next, ...rest] = queue;
+      if (shuffle) {
+        // Pick a random track from the queue
+        const idx = Math.floor(Math.random() * queue.length);
+        const next = queue[idx];
+        setQueue((q) => q.filter((_, i) => i !== idx));
+        await play(next);
+      } else {
+        const [next, ...rest] = queue;
+        setQueue(rest);
+        await play(next);
+      }
+    } else if (repeatMode === 'all' && historyRef.current.length > 0) {
+      // Rebuild queue from history and replay
+      const all = [...historyRef.current];
+      if (currentTrack) all.push(currentTrack);
+      historyRef.current = [];
+      const [first, ...rest] = shuffle
+        ? all.sort(() => Math.random() - 0.5)
+        : all;
       setQueue(rest);
-      await play(next);
+      await play(first);
     } else {
       setIsPlaying(false);
     }
-  }, [queue, play]);
+  }, [queue, play, repeatMode, shuffle, currentTrack]);
 
   const togglePlayPause = useCallback(async () => {
     if (!soundRef.current) {
@@ -193,6 +225,18 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setQueue((q) => [...q, track]);
   }, []);
 
+  const toggleShuffle = useCallback(() => {
+    setShuffle((s) => !s);
+  }, []);
+
+  const cycleRepeat = useCallback(() => {
+    setRepeatMode((m) => {
+      if (m === 'off') return 'all';
+      if (m === 'all') return 'one';
+      return 'off';
+    });
+  }, []);
+
   const isYouTubeTrack = currentTrack?.source_platform === 'youtube';
 
   const updateYouTubeProgress = useCallback((pos: number, dur: number) => {
@@ -214,9 +258,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     <PlayerContext.Provider
       value={{
         currentTrack, isPlaying, position, duration, volume, queue, playbackError,
-        isYouTubeTrack,
+        isYouTubeTrack, shuffle, repeatMode,
         play, togglePlayPause, stop, seekTo, setVolume, skipNext, skipPrev,
-        replaceQueue, addToQueue, updateYouTubeProgress, handleYouTubeStateChange,
+        replaceQueue, addToQueue, toggleShuffle, cycleRepeat,
+        updateYouTubeProgress, handleYouTubeStateChange,
       }}
     >
       {children}

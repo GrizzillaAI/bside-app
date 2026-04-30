@@ -2,6 +2,7 @@ import 'react-native-url-polyfill/auto';
 import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Font from 'expo-font';
 import { AuthProvider } from './src/lib/auth';
@@ -31,13 +32,15 @@ export default function App() {
   if (!ready) return null;
 
   return (
-    <AuthProvider>
-      <PlayerProvider>
-        <NavigationContainer linking={linking}>
-          <StatusBar style="light" />
-          <RootNavigator />
-        </NavigationContainer>
-      </PlayerProvider>
-    </AuthProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <PlayerProvider>
+          <NavigationContainer linking={linking}>
+            <StatusBar style="light" />
+            <RootNavigator />
+          </NavigationContainer>
+        </PlayerProvider>
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }

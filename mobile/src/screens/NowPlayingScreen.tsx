@@ -2,13 +2,14 @@
 import { useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Image, Dimensions,
-  ScrollView, Platform,
+  ScrollView, Platform, Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { usePlayer, formatTime } from '../lib/player';
 import YouTubePlayerComponent from '../components/YouTubePlayer';
+import CassetteDeck from '../components/CassetteDeck';
 import { colors, radii, spacing } from '../lib/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -29,6 +30,7 @@ export default function NowPlayingScreen() {
     currentTrack, isPlaying, position, duration, queue,
     togglePlayPause, skipNext, skipPrev, seekTo, isYouTubeTrack,
     updateYouTubeProgress, handleYouTubeStateChange,
+    shuffle, repeatMode, toggleShuffle, cycleRepeat,
   } = usePlayer();
   const [showQueue, setShowQueue] = useState(false);
 
@@ -39,6 +41,15 @@ export default function NowPlayingScreen() {
 
   const progress = duration > 0 ? position / duration : 0;
   const platformLabel = PLATFORM_LABELS[currentTrack.source_platform] || currentTrack.source_platform;
+
+  const handleShare = async () => {
+    if (!currentTrack) return;
+    try {
+      await Share.share({
+        message: `${currentTrack.title} by ${currentTrack.artist}\n${currentTrack.source_url}`,
+      });
+    } catch {}
+  };
 
   const handleScrub = (evt: any) => {
     if (duration <= 0) return;
@@ -59,9 +70,14 @@ export default function NowPlayingScreen() {
           <Text style={styles.headerLabel}>NOW PLAYING</Text>
           <Text style={styles.headerPlatform}>{platformLabel}</Text>
         </View>
-        <TouchableOpacity onPress={() => setShowQueue(!showQueue)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <Ionicons name="list" size={24} color={showQueue ? colors.pink : colors.silver} />
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity onPress={handleShare} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <Ionicons name="share-outline" size={22} color={colors.silver} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowQueue(!showQueue)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <Ionicons name="list" size={24} color={showQueue ? colors.pink : colors.silver} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {showQueue ? (
@@ -105,14 +121,16 @@ export default function NowPlayingScreen() {
               />
             </View>
           ) : (
-            <View style={styles.artworkWrap}>
+            <View style={styles.nonYtVisual}>
+              {/* Cassette Deck animation */}
+              <CassetteDeck isPlaying={isPlaying} progress={progress} trackTitle={currentTrack.title} />
+
+              {/* Thumbnail below deck if available */}
               {currentTrack.thumbnail_url ? (
-                <Image source={{ uri: currentTrack.thumbnail_url }} style={styles.artwork} />
-              ) : (
-                <View style={styles.artworkPlaceholder}>
-                  <Ionicons name="musical-note" size={80} color={colors.ash} />
+                <View style={styles.artworkSmallWrap}>
+                  <Image source={{ uri: currentTrack.thumbnail_url }} style={styles.artworkSmall} />
                 </View>
-              )}
+              ) : null}
             </View>
           )}
 
@@ -140,6 +158,10 @@ export default function NowPlayingScreen() {
 
           {/* Transport controls */}
           <View style={styles.controls}>
+            <TouchableOpacity onPress={toggleShuffle} style={styles.modeBtn}>
+              <Ionicons name="shuffle" size={22} color={shuffle ? colors.pink : colors.ash} />
+            </TouchableOpacity>
+
             <TouchableOpacity onPress={skipPrev} style={styles.sideBtn}>
               <Ionicons name="play-skip-back" size={32} color={colors.pearl} />
             </TouchableOpacity>
@@ -150,6 +172,15 @@ export default function NowPlayingScreen() {
 
             <TouchableOpacity onPress={skipNext} style={styles.sideBtn}>
               <Ionicons name="play-skip-forward" size={32} color={colors.pearl} />
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={cycleRepeat} style={styles.modeBtn}>
+              <Ionicons
+                name={repeatMode === 'one' ? 'repeat' : 'repeat'}
+                size={22}
+                color={repeatMode !== 'off' ? colors.pink : colors.ash}
+              />
+              {repeatMode === 'one' && <Text style={styles.repeatOneBadge}>1</Text>}
             </TouchableOpacity>
           </View>
         </View>
@@ -172,6 +203,11 @@ const styles = StyleSheet.create({
   },
   headerCenter: {
     alignItems: 'center',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
   },
   headerLabel: {
     color: colors.silver,
@@ -197,24 +233,22 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: spacing.xxl,
   },
-  artworkWrap: {
-    width: ART_SIZE,
-    height: ART_SIZE,
+  nonYtVisual: {
     alignSelf: 'center',
-    borderRadius: radii.xl,
+    width: ART_SIZE,
+    marginBottom: spacing.lg,
+    gap: spacing.md,
+  },
+  artworkSmallWrap: {
+    width: ART_SIZE * 0.4,
+    height: ART_SIZE * 0.4,
+    alignSelf: 'center',
+    borderRadius: radii.lg,
     overflow: 'hidden',
-    marginBottom: spacing.xxl,
   },
-  artwork: {
-    width: ART_SIZE,
-    height: ART_SIZE,
-  },
-  artworkPlaceholder: {
-    width: ART_SIZE,
-    height: ART_SIZE,
-    backgroundColor: colors.graphite,
-    justifyContent: 'center',
-    alignItems: 'center',
+  artworkSmall: {
+    width: ART_SIZE * 0.4,
+    height: ART_SIZE * 0.4,
   },
   trackInfo: {
     marginBottom: spacing.lg,
@@ -270,6 +304,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 36,
     marginTop: spacing.md,
+  },
+  modeBtn: {
+    padding: 8,
+    position: 'relative',
+  },
+  repeatOneBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 2,
+    fontSize: 8,
+    fontWeight: '900',
+    color: colors.pink,
   },
   sideBtn: {
     padding: 8,

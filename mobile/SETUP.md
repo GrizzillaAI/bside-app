@@ -225,6 +225,7 @@ mobile/
 └── src/
     ├── components/
     │   ├── AddToPlaylistModal.tsx ← Add-to-playlist bottom sheet
+    │   ├── CassetteDeck.tsx      ← Animated tape deck visual (Now Playing)
     │   ├── Logo.tsx              ← Mixd X-mark + wordmark
     │   ├── MiniPlayer.tsx        ← Bottom player bar (tap to expand)
     │   └── YouTubePlayer.tsx     ← YouTube iframe player component
@@ -259,12 +260,18 @@ mobile/
 
 - ✅ Full auth flow (sign in, sign up, forgot password)
 - ✅ Multi-platform search (YouTube, Spotify, SoundCloud, Podcasts)
+- ✅ Search history / recent searches (persisted with AsyncStorage)
 - ✅ Library with paste-a-link support
+- ✅ Swipe-to-delete and long-press remove on Library tracks
 - ✅ Playlists (create, play, delete, detail view with track list)
+- ✅ Swipe-to-remove and long-press on playlist tracks
 - ✅ Import screen (Spotify & YouTube OAuth)
 - ✅ Settings (connected accounts, subscription management, sign out)
 - ✅ Mini player with progress bar (tap to expand)
 - ✅ Full-screen Now Playing screen with artwork, progress scrubber, queue view
+- ✅ Cassette deck UI with animated spinning reels on Now Playing screen
+- ✅ Shuffle and repeat modes (off / repeat all / repeat one)
+- ✅ Share track via native share sheet
 - ✅ YouTube playback via react-native-youtube-iframe
 - ✅ Audio playback via expo-av (SoundCloud, podcasts)
 - ✅ Background audio support
@@ -275,10 +282,11 @@ mobile/
 - ✅ B3 event tracking
 - ✅ Mixd branding (ink/pearl/pink color scheme)
 - ✅ Deep linking for OAuth callbacks
+- ✅ Gesture handler (swipe actions) via react-native-gesture-handler
 
 ## What Needs More Work (Next Sessions)
 
-- 🔲 Full cassette deck UI (visual tape animation)
+- 🔲 Playlist reordering (drag to rearrange tracks)
 - 🔲 Spotify SDK integration for Premium playback
 - 🔲 Push notifications
 - 🔲 Offline mode / download support

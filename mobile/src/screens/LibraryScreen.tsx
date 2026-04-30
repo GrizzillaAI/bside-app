@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  FlatList, Image, Alert, ActivityIndicator, RefreshControl,
+  FlatList, Image, Alert, ActivityIndicator, RefreshControl, Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { Swipeable } from 'react-native-gesture-handler';
 import { usePlayer, formatTime } from '../lib/player';
 import { supabase } from '../lib/supabase';
 import { saveTrackToLibrary } from '../lib/api';
@@ -61,6 +62,42 @@ export default function LibraryScreen() {
     }
   };
 
+  const handleRemoveTrack = async (track: LibTrack) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { error } = await supabase
+      .from('library_tracks')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('track_id', track.id);
+    if (error) {
+      Alert.alert('Error', 'Could not remove track.');
+    } else {
+      setTracks((prev) => prev.filter((t) => t.id !== track.id));
+    }
+  };
+
+  const confirmRemove = (track: LibTrack) => {
+    Alert.alert(
+      'Remove from Library',
+      `Remove "${track.title}" from your library?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Remove', style: 'destructive', onPress: () => handleRemoveTrack(track) },
+      ]
+    );
+  };
+
+  const renderRightActions = (track: LibTrack) => (
+    _progress: Animated.AnimatedInterpolation<number>,
+    _dragX: Animated.AnimatedInterpolation<number>,
+  ) => (
+    <TouchableOpacity style={styles.swipeDelete} onPress={() => confirmRemove(track)}>
+      <Ionicons name="trash-outline" size={22} color={colors.pearl} />
+      <Text style={styles.swipeDeleteText}>Remove</Text>
+    </TouchableOpacity>
+  );
+
   const handlePlayTrack = (t: LibTrack, index: number) => {
     const isThis = currentTrack?.source_id === t.source_id;
     if (isThis) { togglePlayPause(); return; }
@@ -81,28 +118,35 @@ export default function LibraryScreen() {
   const renderItem = ({ item, index }: { item: LibTrack; index: number }) => {
     const isThis = currentTrack?.source_id === item.source_id;
     return (
-      <TouchableOpacity style={styles.row} onPress={() => handlePlayTrack(item, index)}>
-        <View style={styles.thumbWrap}>
-          {item.thumbnail_url ? (
-            <Image source={{ uri: item.thumbnail_url }} style={styles.thumb} />
-          ) : (
-            <Ionicons name="musical-note" size={20} color={colors.silver} />
-          )}
-        </View>
-        <View style={styles.info}>
-          <Text style={[styles.title, isThis && { color: colors.pink }]} numberOfLines={1}>{item.title}</Text>
-          <Text style={styles.artist} numberOfLines={1}>{item.artist || 'Unknown artist'}</Text>
-        </View>
-        {item.duration_seconds ? (
-          <Text style={styles.dur}>{formatTime(item.duration_seconds)}</Text>
-        ) : null}
+      <Swipeable renderRightActions={renderRightActions(item)} overshootRight={false}>
         <TouchableOpacity
-          onPress={() => setPlaylistModalTrack(item)}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={styles.row}
+          onPress={() => handlePlayTrack(item, index)}
+          onLongPress={() => confirmRemove(item)}
+          delayLongPress={500}
         >
-          <Ionicons name="list-circle-outline" size={22} color={colors.cobalt} />
+          <View style={styles.thumbWrap}>
+            {item.thumbnail_url ? (
+              <Image source={{ uri: item.thumbnail_url }} style={styles.thumb} />
+            ) : (
+              <Ionicons name="musical-note" size={20} color={colors.silver} />
+            )}
+          </View>
+          <View style={styles.info}>
+            <Text style={[styles.title, isThis && { color: colors.pink }]} numberOfLines={1}>{item.title}</Text>
+            <Text style={styles.artist} numberOfLines={1}>{item.artist || 'Unknown artist'}</Text>
+          </View>
+          {item.duration_seconds ? (
+            <Text style={styles.dur}>{formatTime(item.duration_seconds)}</Text>
+          ) : null}
+          <TouchableOpacity
+            onPress={() => setPlaylistModalTrack(item)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="list-circle-outline" size={22} color={colors.cobalt} />
+          </TouchableOpacity>
         </TouchableOpacity>
-      </TouchableOpacity>
+      </Swipeable>
     );
   };
 
@@ -193,6 +237,19 @@ const styles = StyleSheet.create({
   title: { color: colors.pearl, fontSize: 14, fontWeight: '600' },
   artist: { color: colors.silver, fontSize: 12, marginTop: 1 },
   dur: { color: colors.ash, fontSize: 11, fontVariant: ['tabular-nums'] },
+  swipeDelete: {
+    backgroundColor: '#CC2244',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 80,
+    paddingHorizontal: 8,
+  },
+  swipeDeleteText: {
+    color: colors.pearl,
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 4,
+  },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 8 },
   emptyTitle: { color: colors.pearl, fontSize: 16, fontWeight: '600' },
   muted: { color: colors.silver, fontSize: 13 },
