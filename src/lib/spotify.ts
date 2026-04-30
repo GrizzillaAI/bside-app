@@ -23,6 +23,8 @@ const SPOTIFY_SCOPES = [
 export interface SpotifyConnection {
   user_id: string;
   spotify_user_id: string | null;
+  access_token: string;
+  refresh_token: string;
   expires_at: string;
   scope: string | null;
   is_premium: boolean;
